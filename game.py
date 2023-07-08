@@ -1,8 +1,10 @@
-from re import X
 import pygame, sys
-from pygame.locals import *
-import random
 import math
+
+from re import X
+from time import time
+from pygame.locals import *
+from projectile import *
  
 pygame.init()
  
@@ -48,7 +50,7 @@ class Enemy(pygame.sprite.Sprite):
         pressed_keys = pygame.key.get_pressed()
         if pressed_keys[K_SPACE]:
             bullet.rect.center = (self.rect.center)
-            bullet.update_player_loc(player.rect.x + 17, player.rect.y)
+            bullet.update_player_loc(player.rect.centerx, player.rect.centery)
 
     
 #################################################################################################
@@ -90,31 +92,56 @@ class Projectile(pygame.sprite.Sprite):
         self.player_y = player_y
         self.initial_x = x
         self.initial_y = y
+        self.angle = 0
+
         self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (20,20))
         self.image = pygame.transform.rotate(self.image, 180)
+
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.speed = 4
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.speed = 17
+        self.time = 0.0
 
     def update_player_loc(self, player_x, player_y):
         self.player_x = player_x
         self.player_y = player_y
+        self.angle = self.findAngle(self.player_x, self.player_y, self.initial_x, self.initial_y)
+        self.time = 0
 
     def update(self):
-        # Calculate xy distance self and player
-        dist_x = self.player_x - self.initial_x
-        dist_y = self.player_y - self.initial_y
-        ratio = dist_x/dist_y
+        new_pos = self.calculatePath(self.rect.centerx, self.rect.centery, self.angle)
+        self.rect.x = new_pos[0]
+        self.rect.y = new_pos[1]
 
-        if self.rect.top < SCREEN_HEIGHT:
-            if (dist_x):
-                if (dist_x > 0):
-                    self.rect.x += 3
-                elif (dist_x < 0):
-                    self.rect.x += -3
+    def findAngle(self, enemy_x, enemy_y, player_x, player_y): # HELP FIGURING OUT ANGLE!!! AND PATH CALCULATION!!!
+        try:
+            angle = math.atan((enemy_y - player_y) / (enemy_x - player_x))
+        except:
+            angle = math.pi / 2
 
-            self.rect.y += 5
+        if player_y < enemy_y and player_x > enemy_x:
+            angle = abs(angle)
+        elif player_y < enemy_y and player_x < enemy_x:
+            angle = math.pi - angle
+        elif player_y > enemy_y and player_x < enemy_x:
+            angle = math.pi + abs(angle)
+        elif player_y > enemy_y and player_x > enemy_x:
+            angle = (math.pi * 2) - angle
+        print(angle)
+        return angle
+
+    def calculatePath(self, initial_x, initial_y, angle):
+        vel_x = math.cos(angle)
+        vel_y = math.sin(angle)
+
+        move_x = vel_x
+        move_y = vel_y
+
+        new_x = round(move_x + initial_x)
+        new_y = round(initial_y - move_y)
+
+        return(new_x, new_y)
 
     
     def draw(self, surface):
@@ -126,9 +153,10 @@ class Projectile(pygame.sprite.Sprite):
          
 P1 = Player()
 E1 = Enemy()
-bullet = Projectile(E1.rect.x, E1.rect.y, P1.rect.x + 17, P1.rect.centery)
+bullet = Projectile(E1.rect.centerx, E1.rect.centery, P1.rect.centerx, P1.rect.centery)
  
 while True:     
+    line = [(E1.rect.centerx, E1.rect.centery),(P1.rect.centerx, P1.rect.centery)]
     for event in pygame.event.get():              
         if event.type == QUIT:
             pygame.quit()
@@ -136,6 +164,7 @@ while True:
     DISPLAYSURF.fill(WHITE)
     P1.draw(DISPLAYSURF)
     E1.draw(DISPLAYSURF)
+    pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
     bullet.draw(DISPLAYSURF)
     
     P1.update()
