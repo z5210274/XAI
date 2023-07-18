@@ -2,6 +2,7 @@ import pygame, sys
 import math
 import os.path
 import csv
+import random
 
 from re import X
 from time import time
@@ -88,9 +89,50 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.dest_x = -1
+        self.dest_y = -1
+        self.x = self.rect.centerx
+        self.y = self.rect.centery
+        self.x_vel = 0
+        self.y_vel = 0
+        self.theta = 0
  
     def update(self):
-        pressed_keys = pygame.key.get_pressed()
+        if (self.dest_x == -1 and self.dest_y == -1):
+            self.dest_x = random.randint(0,SCREEN_WIDTH)
+            self.dest_y = random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT)
+
+            line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
+            self.theta = getAngle(line[1], line[0])
+
+            if (self.theta > 360):
+                self.theta = self.theta - 360
+
+            self.x_vel = math.cos(self.theta * (2*math.pi/360)) * 2
+            self.y_vel = math.sin(self.theta * (2*math.pi/360)) * 2
+
+        if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < SCREEN_HEIGHT/2 or self.rect.bottom > SCREEN_HEIGHT):
+            self.dest_x = -1
+            self.dest_y = -1
+            if (self.rect.left < 0):
+                self.rect.move_ip(1,0)
+            elif (self.rect.right > SCREEN_WIDTH):
+                self.rect.move_ip(-1,0)
+            elif (self.rect.top < SCREEN_HEIGHT/2):
+                self.rect.move_ip(0,1)
+            elif (self.rect.bottom > SCREEN_HEIGHT):
+                self.rect.move_ip(0,-1)
+        elif (self.rect.centerx != self.dest_x and self.rect.centery != self.dest_y):
+            self.x += self.x_vel
+            self.y += self.y_vel
+
+            self.rect.centerx = int(self.x)
+            self.rect.centery = int(self.y)
+        else:
+            self.dest_x = -1
+            self.dest_y = -1
+
+        '''pressed_keys = pygame.key.get_pressed()
          
         if self.rect.left > 0:
               if pressed_keys[K_LEFT]:
@@ -103,8 +145,8 @@ class Player(pygame.sprite.Sprite):
                   self.rect.move_ip(0, -2)
         if self.rect.bottom < SCREEN_HEIGHT:        
               if pressed_keys[K_DOWN]:
-                  self.rect.move_ip(0, 2)
-
+                  self.rect.move_ip(0, 2)'''
+        
     def reset_pos(self):
         self.rect.center = (SCREEN_WIDTH/2, 700)
  
@@ -169,6 +211,9 @@ class Projectile(pygame.sprite.Sprite):
             self.miss_y = self.rect.centery
 
         if not self.game_area.contains(self.rect):
+            if (self.rect.top < rect.bottom):
+                self.miss_x = self.rect.centerx
+                self.miss_y = self.rect.centery
 
             data = {"Shooter_x_pos": self.initial_x, 
                     "Shooter_y_pos": self.initial_y,
