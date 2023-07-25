@@ -10,6 +10,8 @@ from pygame.locals import *
 from projectile import *
  
 pygame.init()
+clock = pygame.time.Clock()
+current_time = 0
 
 filename = './data.csv'
 FPS = 240
@@ -49,6 +51,14 @@ def write_csv(new_data):
 #################################################################################################
 #################################################################################################
 #################################################################################################
+
+'''class Environment:
+    def __init__(self):'''
+
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
  
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
@@ -57,24 +67,105 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.image, 180)
         self.rect = self.image.get_rect() 
         self.rect.center = (SCREEN_WIDTH/2, 80)
-        self.x = self.rect.x 
-        self.y = self.rect.y
+        self.x = self.rect.centerx 
+        self.y = self.rect.centery
+        self.theta = 90
+        self.projectile_range = 800
+        self.sensitivity = 0.4
+        self.move_speed = 2
+        self.aim_mode = 3 # 0 - Neuro, 1 - Social, 2 - Cultural, 3 - Player
+        self.aim_text = 'Player'
  
-    def update(self):
+    def update(self, theta):
         pressed_keys = pygame.key.get_pressed()
+
+        if pressed_keys[K_1]:
+            self.aim_mode = 0
+            self.aim_text = 'Neuro'
+        if pressed_keys[K_2]:
+            self.aim_mode = 1
+            self.aim_text = 'Social'
+        if pressed_keys[K_3]:
+            self.aim_mode = 2
+            self.aim_text = 'Cultural'
+        if pressed_keys[K_4]:
+            self.aim_mode = 3
+            self.aim_text = 'Player'
 
         if self.rect.left > 0:
               if pressed_keys[K_a]:
-                  self.rect.move_ip(-2, 0)
+                  self.rect.move_ip(-self.move_speed, 0)
         if self.rect.right < SCREEN_WIDTH:        
               if pressed_keys[K_d]:
-                  self.rect.move_ip(2, 0)
+                  self.rect.move_ip(self.move_speed, 0)
         if self.rect.top > 0:
               if pressed_keys[K_w]:
-                  self.rect.move_ip(0, -2)
+                  self.rect.move_ip(0, -self.move_speed)
         if self.rect.bottom < SCREEN_HEIGHT:        
               if pressed_keys[K_s]:
-                  self.rect.move_ip(0, 2)
+                  self.rect.move_ip(0, self.move_speed)
+
+        if (self.aim_mode == 0):
+            self.update_neuro_mode()
+            self.theta = theta
+        if (self.aim_mode == 1):
+            self.update_social_mode()
+            self.theta = theta
+        if (self.aim_mode == 2):
+            self.update_cultural_mode()
+            self.theta = theta
+        if (self.aim_mode == 3):
+            self.update_player_mode()
+    
+    def update_neuro_mode(self):
+        return 0
+
+    def update_social_mode(self):
+        return 0
+
+    def update_cultural_mode(self):
+        return 0
+
+    def update_player_mode(self):
+        pressed_keys = pygame.key.get_pressed()
+
+        if pressed_keys[K_LEFT]:
+            self.theta += self.sensitivity
+        if pressed_keys[K_RIGHT]:
+            self.theta += -self.sensitivity
+        
+        if (self.theta > 360):
+            self.theta += -360
+        if (self.theta < 0):
+            self.theta += 360
+
+        self.x = self.rect.centerx
+        self.y = self.rect.centery
+
+    def take_shot(self, player_x, player_y, path_history, theta):
+
+        bullet = Projectile(self.rect.centerx, self.rect.centery, player_x, player_y, theta)
+
+        return bullet
+
+    def aim_calc(self, player_x, player_y, path_history):
+        if (self.aim_mode == 0):
+            x = player_x
+            y = player_y
+        if (self.aim_mode == 1):
+            theta = toRadian(90)
+            x = self.x + self.projectile_range*math.cos(theta)
+            y = self.y + self.projectile_range*math.sin(theta)
+        if (self.aim_mode == 2):
+            theta = toRadian(90)
+            x = self.x + self.projectile_range*math.cos(theta)
+            y = self.y + self.projectile_range*math.sin(theta)
+        if (self.aim_mode == 3):
+            theta = toRadian(self.theta)
+            x = self.x + self.projectile_range*math.cos(theta)
+            y = self.y + self.projectile_range*math.sin(theta)
+        
+        return (x,y)
  
     def draw(self, surface):
         surface.blit(self.image, self.rect) 
@@ -96,59 +187,81 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0
         self.theta = 0
+        self.move_speed = 2
+        self.path_history = []
+        self.mode = 0
  
-    def update(self):
-        if (self.dest_x == -1 and self.dest_y == -1):
-            self.dest_x = random.randint(0,SCREEN_WIDTH)
-            self.dest_y = random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT)
+    def update(self, current_time):
+        self.update_path_history(current_time)
+        
+        if (self.mode == 0):
+            if (self.dest_x == -1 and self.dest_y == -1):
+                self.dest_x = random.randint(0,SCREEN_WIDTH)
+                self.dest_y = random.randint(0,SCREEN_HEIGHT)
 
-            line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
-            self.theta = getAngle(line[1], line[0])
+                line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
+                self.theta = getAngle(line[1], line[0])
 
-            if (self.theta > 360):
-                self.theta = self.theta - 360
+                if (self.theta > 360):
+                    self.theta = self.theta - 360
 
-            self.x_vel = math.cos(self.theta * (2*math.pi/360)) * 2
-            self.y_vel = math.sin(self.theta * (2*math.pi/360)) * 2
+                self.x_vel = math.cos(self.theta * (2*math.pi/360)) * self.move_speed
+                self.y_vel = math.sin(self.theta * (2*math.pi/360)) * self.move_speed
 
-        if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < SCREEN_HEIGHT/2 or self.rect.bottom > SCREEN_HEIGHT):
-            self.dest_x = -1
-            self.dest_y = -1
-            if (self.rect.left < 0):
-                self.rect.move_ip(1,0)
-            elif (self.rect.right > SCREEN_WIDTH):
-                self.rect.move_ip(-1,0)
-            elif (self.rect.top < SCREEN_HEIGHT/2):
-                self.rect.move_ip(0,1)
-            elif (self.rect.bottom > SCREEN_HEIGHT):
-                self.rect.move_ip(0,-1)
-        elif (self.rect.centerx != self.dest_x and self.rect.centery != self.dest_y):
-            self.x += self.x_vel
-            self.y += self.y_vel
+            if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < 0 or self.rect.bottom > SCREEN_HEIGHT):
+                self.dest_x = -1
+                self.dest_y = -1
+                if (self.rect.left < 0):
+                    self.rect.move_ip(1,0)
+                elif (self.rect.right > SCREEN_WIDTH):
+                    self.rect.move_ip(-1,0)
+                elif (self.rect.top < 0):
+                    self.rect.move_ip(0,1)
+                elif (self.rect.bottom > SCREEN_HEIGHT):
+                    self.rect.move_ip(0,-1)
+            elif (self.rect.centerx != self.dest_x and self.rect.centery != self.dest_y):
+                self.x += self.x_vel
+                self.y += self.y_vel
 
-            self.rect.centerx = int(self.x)
-            self.rect.centery = int(self.y)
-        else:
-            self.dest_x = -1
-            self.dest_y = -1
+                self.rect.centerx = int(self.x)
+                self.rect.centery = int(self.y)
+            else:
+                self.dest_x = -1
+                self.dest_y = -1
 
-        '''pressed_keys = pygame.key.get_pressed()
+        if (self.mode == 1):
+            pressed_keys = pygame.key.get_pressed()
          
-        if self.rect.left > 0:
-              if pressed_keys[K_LEFT]:
-                  self.rect.move_ip(-2, 0)
-        if self.rect.right < SCREEN_WIDTH:        
-              if pressed_keys[K_RIGHT]:
-                  self.rect.move_ip(2, 0)
-        if self.rect.top > 0:
-              if pressed_keys[K_UP]:
-                  self.rect.move_ip(0, -2)
-        if self.rect.bottom < SCREEN_HEIGHT:        
-              if pressed_keys[K_DOWN]:
-                  self.rect.move_ip(0, 2)'''
+            if self.rect.left > 0:
+                if pressed_keys[K_j]:
+                    self.rect.move_ip(-self.move_speed, 0)
+            if self.rect.right < SCREEN_WIDTH:        
+                if pressed_keys[K_l]:
+                    self.rect.move_ip(self.move_speed, 0)
+            if self.rect.top > 0:
+                if pressed_keys[K_i]:
+                    self.rect.move_ip(0, -self.move_speed)
+            if self.rect.bottom < SCREEN_HEIGHT:        
+                if pressed_keys[K_k]:
+                    self.rect.move_ip(0, self.move_speed)
+
+            self.x = self.rect.centerx
+            self.y = self.rect.centery
+            self.dest_x = -1
+            self.dest_y = -1
+
+    def update_path_history(self, current_time):
+        if (len(self.path_history) > 1000): # Only store last 5 seconds, Ticks in .05ms intervals
+            self.path_history.pop(0)
+
+        self.path_history.append([current_time, self.rect.centerx, self.rect.centery])
         
     def reset_pos(self):
         self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.x = self.rect.centerx
+        self.y = self.rect.centery
+        self.dest_x = -1
+        self.dest_y = -1
  
     def draw(self, surface):
         surface.blit(self.image, self.rect)    
@@ -200,7 +313,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_y_pos_current": rect.centery,
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
-                    "Theta": round(self.theta + 90, 2),
+                    "Theta": round(self.theta, 2),
                     "Hit": 1}
 
             write_csv(data)
@@ -223,7 +336,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_y_pos_current": rect.centery,
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
-                    "Theta": round(self.theta + 90, 2),
+                    "Theta": round(self.theta, 2),
                     "Hit": 0}
 
             write_csv(data)
@@ -239,9 +352,15 @@ class Projectile(pygame.sprite.Sprite):
 P1 = Player()
 E1 = Enemy()
 projectile_group = pygame.sprite.Group()
+font = pygame.font.SysFont(None,16)
+text = font.render('Aim mode: ' + str(E1.aim_mode), True, BLACK)
+textRect = text.get_rect()
+textRect.center = (50, 50)
  
 while True:     
-    line = [(E1.rect.centerx, E1.rect.centery),(P1.rect.centerx, P1.rect.centery)]
+    text = font.render('Aim mode: ' + str(E1.aim_text), True, BLACK)
+    aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
+    line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
     theta = getAngle(line[1], line[0])
     if (theta > 360):
         theta = theta - 360
@@ -251,23 +370,28 @@ while True:
             sys.exit()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                bullet = Projectile(E1.rect.centerx, E1.rect.centery, P1.rect.centerx, P1.rect.centery, theta)
+                bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
                 projectile_group.add(bullet)
-                #print(bullet.initial_x, bullet.initial_y, bullet.player_x, bullet.player_y, theta - 90)
-                #print(bullet.x_vel, bullet.y_vel)
             if event.key == pygame.K_r: # Clear projectile cache
                 projectile_group.empty()
             if event.key == pygame.K_p:
                 P1.reset_pos()
+            if event.key == pygame.K_o:
+                if (P1.mode == 0):
+                    P1.mode = 1
+                else:
+                    P1.mode = 0
 
     DISPLAYSURF.fill(WHITE)
+    DISPLAYSURF.blit(text, textRect)
     P1.draw(DISPLAYSURF)
     E1.draw(DISPLAYSURF)
     pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
     projectile_group.draw(DISPLAYSURF)
     
-    P1.update()
-    #E1.update()
+    current_time = pygame.time.get_ticks()
+    P1.update(current_time)
+    E1.update(theta)
     projectile_group.update(P1.rect)
          
     pygame.display.update()
