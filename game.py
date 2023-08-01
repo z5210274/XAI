@@ -75,6 +75,12 @@ class Enemy(pygame.sprite.Sprite):
         self.move_speed = 2
         self.aim_mode = 3 # 0 - Neuro, 1 - Social, 2 - Cultural, 3 - Player
         self.aim_text = 'Player'
+        self.auto = 0
+
+        self.neuro = 0.75
+        self.social = 0.75
+        self.cultural = 0.5
+        self.learning_rate = 0.05
  
     def update(self, theta):
         pressed_keys = pygame.key.get_pressed()
@@ -142,9 +148,36 @@ class Enemy(pygame.sprite.Sprite):
         self.x = self.rect.centerx
         self.y = self.rect.centery
 
+    def strategize(self, player_x, player_y, path_history):
+        neuro_x = path_history[0][1] - player_x
+        neuro_y = path_history[0][2] - player_y
+        dist_neuro = math.sqrt(neuro_x**2 + neuro_y**2)
+        neuro_weight = self.neuro*dist_neuro
+
+        social_x = path_history[800][1] - player_x
+        social_y = path_history[800][2] - player_y
+        dist_social = math.sqrt(social_x**2 + social_y**2)
+        social_weight = self.social*dist_social
+
+        cultural_x = path_history[600][1] - player_x
+        cultural_y = path_history[600][2] - player_y
+        dist_cultural = math.sqrt(cultural_x**2 + cultural_y**2)
+        cultural_weight = self.cultural*dist_cultural
+
+        if (neuro_weight >= max(social_weight, cultural_weight)):
+            self.aim_mode = 0
+            self.aim_text = 'Neuro'
+        elif (social_weight >= cultural_weight):
+            self.aim_mode = 1
+            self.aim_text = 'Social'
+        else:
+            self.aim_mode = 2
+            self.aim_text = 'Cultural'
+
+
     def take_shot(self, player_x, player_y, path_history, theta):
 
-        bullet = Projectile(self.rect.centerx, self.rect.centery, player_x, player_y, theta)
+        bullet = Projectile(self.rect.centerx, self.rect.centery, player_x, player_y, theta, self.aim_mode)
 
         return bullet
 
@@ -153,13 +186,21 @@ class Enemy(pygame.sprite.Sprite):
             x = player_x
             y = player_y
         if (self.aim_mode == 1):
-            theta = toRadian(90)
-            x = self.x + self.projectile_range*math.cos(theta)
-            y = self.y + self.projectile_range*math.sin(theta)
+            dist = math.sqrt((player_x - self.x)**2 + (player_y - self.x)**2)
+            time_estimate = int(dist/3.5)
+            prev = path_history[(len(path_history)-1) - time_estimate]
+            x_move = player_x - prev[1]
+            y_move = player_y - prev[2]
+            x = player_x + x_move
+            y = player_y + y_move
         if (self.aim_mode == 2):
-            theta = toRadian(90)
-            x = self.x + self.projectile_range*math.cos(theta)
-            y = self.y + self.projectile_range*math.sin(theta)
+            dist = math.sqrt((player_x - self.x)**2 + (player_y - self.x)**2)
+            time_estimate = int(dist/7)
+            prev = path_history[(len(path_history)-1) - time_estimate]
+            x_move = player_x - prev[1]
+            y_move = player_y - prev[2]
+            x = player_x - x_move
+            y = player_y - y_move
         if (self.aim_mode == 3):
             theta = toRadian(self.theta)
             x = self.x + self.projectile_range*math.cos(theta)
@@ -196,8 +237,20 @@ class Player(pygame.sprite.Sprite):
         
         if (self.mode == 0):
             if (self.dest_x == -1 and self.dest_y == -1):
-                self.dest_x = random.randint(0,SCREEN_WIDTH)
-                self.dest_y = random.randint(0,SCREEN_HEIGHT)
+                #self.dest_x = random.randint(0,SCREEN_WIDTH)
+                #self.dest_y = random.randint(0,SCREEN_HEIGHT)
+
+                self.dest_x = self.rect.centerx + random.randint(-200,200)
+                self.dest_y = self.rect.centery + random.randint(-50,50)
+                
+                if (self.dest_x < 0):
+                    self.dest_x = abs(self.dest_x)
+                if (self.dest_y < 0):
+                    self.dest_y = abs(self.dest_y)
+                if (self.dest_x > SCREEN_WIDTH):
+                    self.dest_x += -random.randint(0,150)
+                if (self.dest_y > SCREEN_HEIGHT):
+                    self.dest_y += -random.randint(0,50)
 
                 line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
                 self.theta = getAngle(line[1], line[0])
@@ -271,13 +324,14 @@ class Player(pygame.sprite.Sprite):
 #################################################################################################
 
 class Projectile(pygame.sprite.Sprite): 
-    def __init__(self, x, y, player_x, player_y, theta):
+    def __init__(self, x, y, player_x, player_y, theta, aim_mode):
         super().__init__() 
         self.player_x = player_x
         self.player_y = player_y
         self.initial_x = x
         self.initial_y = y
         self.theta = theta
+        self.aim_mode = aim_mode
         self.x_vel = math.cos(self.theta * (2*math.pi/360)) * 7
         self.y_vel = math.sin(self.theta * (2*math.pi/360)) * 7
         self.x = self.initial_x
@@ -293,7 +347,7 @@ class Projectile(pygame.sprite.Sprite):
         self.rect.centerx = x
         self.rect.centery = y
 
-    def update(self, rect):
+    def update(self, rect, enemy):
         self.x += self.x_vel
         self.y += self.y_vel
 
@@ -316,6 +370,17 @@ class Projectile(pygame.sprite.Sprite):
                     "Theta": round(self.theta, 2),
                     "Hit": 1}
 
+            if (self.aim_mode == 0):
+                if (enemy.neuro <= 1 - enemy.learning_rate):
+                    enemy.neuro += enemy.learning_rate
+            if (self.aim_mode == 1):
+                if (enemy.social <= 1 - enemy.learning_rate):
+                    enemy.social += enemy.learning_rate
+            if (self.aim_mode == 2):
+                if (enemy.cultural <= 1 - enemy.learning_rate):
+                    enemy.cultural += enemy.learning_rate
+
+            print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
             self.kill()
 
@@ -339,8 +404,20 @@ class Projectile(pygame.sprite.Sprite):
                     "Theta": round(self.theta, 2),
                     "Hit": 0}
 
+            if (self.aim_mode == 0):
+                if (enemy.neuro > 0 + enemy.learning_rate):
+                    enemy.neuro += -enemy.learning_rate
+            if (self.aim_mode == 1):
+                if (enemy.social > 0 + enemy.learning_rate):
+                    enemy.social += -enemy.learning_rate
+            if (self.aim_mode == 2):
+                if (enemy.cultural > 0 + enemy.learning_rate):
+                    enemy.cultural += -enemy.learning_rate
+
+            print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
             self.kill()
+        return
 
     def draw(self, surface):
         surface.blit(self.image, self.rect)  
@@ -381,6 +458,11 @@ while True:
                     P1.mode = 1
                 else:
                     P1.mode = 0
+            if event.key == pygame.K_m:
+                if (E1.auto == 0):
+                    E1.auto = 1
+                else:
+                    E1.auto = 0
 
     DISPLAYSURF.fill(WHITE)
     DISPLAYSURF.blit(text, textRect)
@@ -391,8 +473,11 @@ while True:
     
     current_time = pygame.time.get_ticks()
     P1.update(current_time)
+    if (E1.auto == 1):
+        if (len(P1.path_history) > 1000):
+            E1.strategize(P1.rect.centerx, P1.rect.centery, P1.path_history)
     E1.update(theta)
-    projectile_group.update(P1.rect)
+    projectile_group.update(P1.rect, E1)
          
     pygame.display.update()
     FramePerSec.tick(FPS)
