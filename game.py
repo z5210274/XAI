@@ -64,7 +64,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
         self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (50,50))
-        self.image = pygame.transform.rotate(self.image, 180)
+        #self.image = pygame.transform.rotate(self.image, 180)
         self.rect = self.image.get_rect() 
         self.rect.center = (SCREEN_WIDTH/2, 80)
         self.x = self.rect.centerx 
@@ -163,6 +163,8 @@ class Enemy(pygame.sprite.Sprite):
         cultural_y = path_history[600][2] - player_y
         dist_cultural = math.sqrt(cultural_x**2 + cultural_y**2)
         cultural_weight = self.cultural*dist_cultural
+
+        print(neuro_weight, social_weight, cultural_weight)
 
         if (neuro_weight >= max(social_weight, cultural_weight)):
             self.aim_mode = 0
@@ -380,7 +382,7 @@ class Projectile(pygame.sprite.Sprite):
                 if (enemy.cultural <= 1 - enemy.learning_rate):
                     enemy.cultural += enemy.learning_rate
 
-            print(enemy.neuro, enemy.social, enemy.cultural)
+            #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
             self.kill()
 
