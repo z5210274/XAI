@@ -3,6 +3,7 @@ import math
 import os.path
 import csv
 import random
+import numpy as np
 
 from re import X
 from time import time
@@ -51,14 +52,6 @@ def write_csv(new_data):
 #################################################################################################
 #################################################################################################
 #################################################################################################
-
-'''class Environment:
-    def __init__(self):'''
-
-
-#################################################################################################
-#################################################################################################
-#################################################################################################
  
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
@@ -71,7 +64,7 @@ class Enemy(pygame.sprite.Sprite):
         self.y = self.rect.centery
         self.theta = 90
         self.projectile_range = 800
-        self.sensitivity = 0.4
+        self.sensitivity = 1
         self.move_speed = 2
         self.aim_mode = 3 # 0 - Neuro, 1 - Social, 2 - Cultural, 3 - Player
         self.aim_text = 'Player'
