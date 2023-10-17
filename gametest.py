@@ -66,6 +66,12 @@ class Enemy(pygame.sprite.Sprite):
         self.social = 0.75
         self.cultural = 0.5
         self.learning_rate = 0.05
+
+    def reset(self):
+        self.rect.center = (SCREEN_WIDTH/2, 80)
+        self.x = self.rect.centerx 
+        self.y = self.rect.centery
+        self.theta = 90
  
     def update(self, theta, mode, action):
         if mode == 1:
@@ -173,7 +179,7 @@ class Enemy(pygame.sprite.Sprite):
         dist_cultural = math.sqrt(cultural_x**2 + cultural_y**2)
         cultural_weight = self.cultural*dist_cultural
 
-        print(neuro_weight, social_weight, cultural_weight)
+        #print(neuro_weight, social_weight, cultural_weight)
 
         if (neuro_weight >= max(social_weight, cultural_weight)):
             self.aim_mode = 0
@@ -242,6 +248,11 @@ class Player(pygame.sprite.Sprite):
         self.move_speed = 2
         self.path_history = []
         self.mode = 0
+
+    def reset(self):
+        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.x = self.rect.centerx
+        self.y = self.rect.centery
  
     def update(self, current_time):
         self.update_path_history(current_time)
@@ -394,6 +405,7 @@ class Projectile(pygame.sprite.Sprite):
             #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
             env.reward += self.calculate_reward(True, rect)
+            env.shots_taken += 1
             self.kill()
 
         if (self.rect.top > rect.bottom and self.miss_x == -1 and self.miss_y == -1):
@@ -426,9 +438,10 @@ class Projectile(pygame.sprite.Sprite):
                 if (enemy.cultural > 0 + enemy.learning_rate):
                     enemy.cultural += -enemy.learning_rate
 
-            print(enemy.neuro, enemy.social, enemy.cultural)
+            #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
             env.reward += self.calculate_reward(False, rect)
+            env.shots_taken += 1
             self.kill()
         return
 

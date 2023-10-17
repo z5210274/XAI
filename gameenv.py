@@ -35,7 +35,7 @@ from gametest import Enemy, Player, Projectile
 
 current_time = 0
 
-filename = './data.csv'
+filename = './episode.csv'
 FPS = 240
 
 # Screen information
@@ -48,6 +48,16 @@ RED   = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+
+check_file = os.path.isfile(filename)
+print("data.csv exists: " + str(check_file))
+
+def write_csv(new_data):
+    field_names = ['Episode', 'Reward']
+    dict = new_data
+    with open(filename, 'a') as file:
+        dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
+        dict_object.writerow(dict)
 
 #################################################################################################
 #################################################################################################
@@ -65,16 +75,19 @@ class GameEnvironment(gym.Env):
         self.current_pos = self.start_pos
         self.mode = 0
         self.reward = 0
+        self.shots_taken = 0
 
         self.P1 = Player()
         self.E1 = Enemy()
         self.projectile_group = pygame.sprite.Group()
 
         self.action_space = Discrete(6)
-        self.observation_shape = (SCREEN_WIDTH,SCREEN_HEIGHT,3)
-        self.observation_space = Box(low = np.zeros(self.observation_shape), 
+        self.observation_shape = (SCREEN_WIDTH,SCREEN_HEIGHT, 3)
+        '''self.observation_space = Box(low = np.zeros(self.observation_shape), 
                                             high = np.ones(self.observation_shape),
-                                            dtype = np.float16)
+                                            dtype = np.float16)'''
+
+        self.observation_space = Box(low = 0, high = 255, shape = self.observation_shape, dtype = np.uint8)
 
         pygame.init()
         self.FramePerSec = pygame.time.Clock()
@@ -106,9 +119,18 @@ class GameEnvironment(gym.Env):
 
         env.projectile_group.update(self.P1.rect, self.E1, self)
         
-        if self.reward > 300:
+        '''if self.reward > 300:
             done = True
-        elif self.reward < 300:
+        elif self.reward < -300:
+            done = True
+        elif self.shots_taken >= 100:
+            done = True
+        else:
+            done = False'''
+        
+        if self.shots_taken >= 50:
+            done = True
+        else:
             done = False
 
         observation = self.get_state()
@@ -146,6 +168,11 @@ class GameEnvironment(gym.Env):
         self.player_centery = 700
         self.current_pos = self.start_pos
         self.reward = 0
+        self.shots_taken = 0
+
+        self.E1.reset()
+        self.P1.reset_pos()
+        self.projectile_group.empty()
 
         observation = self.get_state()
 
@@ -192,6 +219,7 @@ model = create_q_model()
 # The weights of a target model get updated every 10000 steps thus when the
 # loss between the Q-values is calculated the target Q-value is stable.
 model_target = create_q_model()
+#model_target = keras.models.load_model('./model.keras')
 
 # In the Deepmind paper they use RMSProp however then Adam optimizer
 # improves training time
@@ -217,7 +245,7 @@ max_memory_length = 100000
 # Train the model after 4 actions
 update_after_actions = 4
 # How often to update the target network
-update_target_network = 10000
+update_target_network = 2000
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
@@ -271,16 +299,15 @@ register(
 )
 
 env = gym.make('Projectile_Predictor')
-env = gym.wrappers.ResizeObservation(env, (84, 84))
-env = gym.wrappers.FrameStack(env, 4)
-state = env.reset()
+env = gym.wrappers.ResizeObservation(env, 84)
+#env = gym.wrappers.FrameStack(env, 4)
+state, watever = env.reset()
 env.render([0,0],[0,0])
 
 while True:
-    state = env.reset()
-    #state, stacked_frames = stack_frames(stacked_frames, state, True)
+    state, watever = env.reset()
+    state, stacked_frames = stack_frames(stacked_frames, state, True)
     done = False
-    env.reward = 0
 
     for timestep in range (1,max_steps_per_episode):
         aim_x, aim_y = env.E1.aim_calc(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history)
@@ -310,7 +337,7 @@ while True:
 
         #action = env.action_space.sample()  # Random action selection
         state_next, reward, done, _, hi = env.step(action)
-        #state_next, stacked_frames = stack_frames(stacked_frames, state, True)
+        state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
         state_next = np.array(state_next)
 
         # Save actions and states in replay buffer
@@ -338,7 +365,7 @@ while True:
 
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
-            #state_next_sample = preprocess_frame(state_next_sample)
+            #print(state_next_sample.shape)
             future_rewards = model_target.predict(state_next_sample)
             # Q value = reward + discount factor * expected future reward
             updated_q_values = rewards_sample + gamma * tf.reduce_max(
@@ -370,6 +397,8 @@ while True:
             # Log details
             template = "running reward: {:.2f} at episode {}, frame count {}"
             print(template.format(running_reward, episode_count, frame_count))
+            model_target.save('./model.keras')
+            print("Model Saved")
 
         # Limit the state and reward history
         if len(rewards_history) > max_memory_length:
@@ -427,7 +456,10 @@ while True:
     running_reward = np.mean(episode_reward_history)
 
     episode_count += 1
+    data = {"Episode": episode_count, "Reward": env.reward}
+    write_csv(data)
+    print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
-    if running_reward > 40:  # Condition to consider the task solved
+    if running_reward > 150:  # Condition to consider the task solved
         print("Solved at episode {}!".format(episode_count))
         break
