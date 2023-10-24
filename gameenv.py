@@ -6,6 +6,7 @@ from keras.layers import Dense, Dropout
 from keras.optimizers import Adam
 import tensorflow as tf
 import numpy as np
+import datetime
 
 from gym import Env
 from gym.spaces import Discrete, Box
@@ -36,11 +37,14 @@ from gametest import Enemy, Player, Projectile
 current_time = 0
 
 filename = './episode.csv'
+filename2 = './target.csv'
 FPS = 240
 
 # Screen information
-SCREEN_WIDTH = 720
-SCREEN_HEIGHT = 900
+#SCREEN_WIDTH = 720
+#SCREEN_HEIGHT = 900
+SCREEN_WIDTH = 360
+SCREEN_HEIGHT = 450
 
 # Predefined some colors
 BLUE  = (0, 0, 255)
@@ -50,12 +54,21 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 check_file = os.path.isfile(filename)
-print("data.csv exists: " + str(check_file))
+check_file2 = os.path.isfile(filename2)
+print("episode.csv exists: " + str(check_file))
+print("target.csv exists: " + str(check_file2))
 
 def write_csv(new_data):
-    field_names = ['Episode', 'Reward']
+    field_names = ['Episode', 'Reward', 'Time']
     dict = new_data
     with open(filename, 'a') as file:
+        dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
+        dict_object.writerow(dict)
+
+def write_csv2(new_data):
+    field_names = ['Episode', 'Running_Reward', 'Frame_Count', 'Time']
+    dict = new_data
+    with open(filename2, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
         dict_object.writerow(dict)
 
@@ -70,7 +83,7 @@ class GameEnvironment(gym.Env):
         self.enemy_centery = 80
         self.enemy_theta = 90
         self.player_centerx = SCREEN_WIDTH/2
-        self.player_centery = 700
+        self.player_centery = SCREEN_HEIGHT - 100
         self.start_pos = [self.enemy_centerx, self.enemy_centery]
         self.current_pos = self.start_pos
         self.mode = 0
@@ -91,7 +104,7 @@ class GameEnvironment(gym.Env):
 
         pygame.init()
         self.FramePerSec = pygame.time.Clock()
-        self.game_area = pygame.Rect(0,0,720,900)
+        self.game_area = pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
         self.clock = pygame.time.Clock()
 
         self.DISPLAYSURF = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
@@ -128,7 +141,7 @@ class GameEnvironment(gym.Env):
         else:
             done = False'''
         
-        if self.shots_taken >= 50:
+        if self.shots_taken >= 10:
             done = True
         else:
             done = False
@@ -165,7 +178,7 @@ class GameEnvironment(gym.Env):
         self.enemy_centery = 80
         self.enemy_theta = 90
         self.player_centerx = SCREEN_WIDTH/2
-        self.player_centery = 700
+        self.player_centery = SCREEN_HEIGHT - 100
         self.current_pos = self.start_pos
         self.reward = 0
         self.shots_taken = 0
@@ -214,12 +227,13 @@ def create_q_model():
 
 # The first model makes the predictions for Q-values which are used to
 # make a action.
-model = create_q_model()
+#model = create_q_model()
+model = keras.models.load_model('./model.keras')
 # Build a target model for the prediction of future rewards.
 # The weights of a target model get updated every 10000 steps thus when the
 # loss between the Q-values is calculated the target Q-value is stable.
-model_target = create_q_model()
-#model_target = keras.models.load_model('./model.keras')
+#model_target = create_q_model()
+model_target = keras.models.load_model('./model.keras')
 
 # In the Deepmind paper they use RMSProp however then Adam optimizer
 # improves training time
@@ -327,7 +341,7 @@ while True:
             # From environment state
             state_tensor = tf.convert_to_tensor(state)
             state_tensor = tf.expand_dims(state_tensor, 0)
-            action_probs = model(state_tensor, training=False)
+            action_probs = model(state_tensor, training=True)
             # Take best action
             action = tf.argmax(action_probs[0]).numpy()
 
@@ -399,6 +413,9 @@ while True:
             print(template.format(running_reward, episode_count, frame_count))
             model_target.save('./model.keras')
             print("Model Saved")
+            now2 = datetime.datetime.now()
+            data2 = {"Episode": episode_count, "Running_Reward": running_reward, 'Frame_Count': frame_count, "Time": now.time()} 
+            write_csv2(data2)
 
         # Limit the state and reward history
         if len(rewards_history) > max_memory_length:
@@ -412,8 +429,10 @@ while True:
             break
 
         if (action == 4 and env.mode == 0):
-            bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
-            env.projectile_group.add(bullet)
+            if (env.E1.reloading == 0):
+                bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
+                env.projectile_group.add(bullet)
+                env.E1.reloading = 1
 
         for event in pygame.event.get():              
             if event.type == QUIT:
@@ -421,8 +440,10 @@ while True:
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
-                    env.projectile_group.add(bullet)
+                    if (env.E1.reloading == 0):
+                        bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
+                        env.projectile_group.add(bullet)
+                        env.E1.reloading = 1
                 if event.key == pygame.K_r: # Clear projectile cache
                     env.projectile_group.empty()
                 if event.key == pygame.K_p:
@@ -447,7 +468,7 @@ while True:
         #env.projectile_group.update(env.P1.rect, env.E1)
 
         env.render(line[0],line[1])
-        env.FramePerSec.tick(FPS)
+        env.FramePerSec.tick(720)
     
     # Update running reward to check condition for solving
     episode_reward_history.append(env.reward)
@@ -456,10 +477,81 @@ while True:
     running_reward = np.mean(episode_reward_history)
 
     episode_count += 1
-    data = {"Episode": episode_count, "Reward": env.reward}
+    now = datetime.datetime.now()
+    data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time()} 
     write_csv(data)
     print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
     if running_reward > 150:  # Condition to consider the task solved
         print("Solved at episode {}!".format(episode_count))
         break
+
+'''while True:
+    state, watever = env.reset()
+    state, stacked_frames = stack_frames(stacked_frames, state, True)
+    done = False
+
+    for timestep in range (1,max_steps_per_episode):
+        aim_x, aim_y = env.E1.aim_calc(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history)
+        line = [(env.E1.rect.centerx, env.E1.rect.centery),(aim_x, aim_y)]
+        theta = getAngle(line[1], line[0])
+        if (theta > 360):
+            theta = theta - 360
+
+        frame_count += 1
+
+        # Predict action Q-values
+        # From environment state
+        state_tensor = tf.convert_to_tensor(state)
+        state_tensor = tf.expand_dims(state_tensor, 0)
+        action_probs = model(state_tensor, training=False)
+        # Take best action
+        action = tf.argmax(action_probs[0]).numpy()
+
+        state_next, reward, done, _, hi = env.step(action)
+
+        if (action == 4 and env.mode == 0):
+            if (env.E1.reloading == 0):
+                bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
+                env.projectile_group.add(bullet)
+                env.E1.reloading = 1
+
+        for event in pygame.event.get():              
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    if (env.E1.reloading == 0):
+                        bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
+                        env.projectile_group.add(bullet)
+                        env.E1.reloading = 1
+                if event.key == pygame.K_r: # Clear projectile cache
+                    env.projectile_group.empty()
+                if event.key == pygame.K_p:
+                    env.P1.reset_pos()
+                if event.key == pygame.K_o:
+                    if (env.P1.mode == 0):
+                        env.P1.mode = 1
+                    else:
+                        env.P1.mode = 0
+                if event.key == pygame.K_m:
+                    if (env.E1.auto == 0):
+                        env.E1.auto = 1
+                    else:
+                        env.E1.auto = 0
+        
+        current_time = pygame.time.get_ticks()
+        env.P1.update(current_time)
+        if (env.E1.auto == 1):
+            if (len(env.P1.path_history) > 1000):
+                env.E1.strategize(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history)
+
+        env.render(line[0],line[1])
+        env.FramePerSec.tick(720)
+
+    episode_count += 1
+    now = datetime.datetime.now()
+    data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time()} 
+    write_csv(data)
+    print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))'''

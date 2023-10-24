@@ -16,8 +16,10 @@ filename = './data.csv'
 FPS = 240
 
 # Screen information
-SCREEN_WIDTH = 720
-SCREEN_HEIGHT = 900
+#SCREEN_WIDTH = 720
+#SCREEN_HEIGHT = 900
+SCREEN_WIDTH = 360
+SCREEN_HEIGHT = 450
 
 # Predefined some colors
 BLUE  = (0, 0, 255)
@@ -61,6 +63,7 @@ class Enemy(pygame.sprite.Sprite):
         self.aim_mode = 3 # 0 - Neuro, 1 - Social, 2 - Cultural, 3 - Player
         self.aim_text = 'Player'
         self.auto = 0
+        self.reloading = 0
 
         self.neuro = 0.75
         self.social = 0.75
@@ -118,10 +121,10 @@ class Enemy(pygame.sprite.Sprite):
         if mode == 0:
             if self.rect.left > 0:
                 if action == 0:
-                    self.rect.move_ip(self.move_speed, 0)
+                    self.rect.move_ip(-self.move_speed, 0)
             if self.rect.right < SCREEN_WIDTH:        
                 if action == 1:
-                    self.rect.move_ip(-self.move_speed, 0)
+                    self.rect.move_ip(self.move_speed, 0)
             '''if self.rect.top > 0:
                 if action == 2:
                     self.rect.move_ip(0, self.move_speed)
@@ -132,6 +135,7 @@ class Enemy(pygame.sprite.Sprite):
                 self.theta += -self.sensitivity
             if action == 3:
                 self.theta += self.sensitivity
+                
                 
             if (self.theta > 360):
                 self.theta += -360
@@ -237,7 +241,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__() 
         self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
         self.rect = self.image.get_rect()
-        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.dest_x = -1
         self.dest_y = -1
         self.x = self.rect.centerx
@@ -248,9 +252,10 @@ class Player(pygame.sprite.Sprite):
         self.move_speed = 2
         self.path_history = []
         self.mode = 0
+        self.move_right = 1
 
     def reset(self):
-        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.x = self.rect.centerx
         self.y = self.rect.centery
  
@@ -258,7 +263,10 @@ class Player(pygame.sprite.Sprite):
         self.update_path_history(current_time)
         
         if (self.mode == 0):
-            if (self.dest_x == -1 and self.dest_y == -1):
+
+############################# Random Movement ##################################
+
+            '''if (self.dest_x == -1 and self.dest_y == -1):
                 #self.dest_x = random.randint(0,SCREEN_WIDTH)
                 #self.dest_y = random.randint(0,SCREEN_HEIGHT)
 
@@ -302,7 +310,19 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
             else:
                 self.dest_x = -1
-                self.dest_y = -1
+                self.dest_y = -1'''
+
+############################# Left and right Movement ##################################
+
+            if self.move_right == 1:
+                self.x += self.move_speed
+            if self.move_right == 0:
+                self.x -= self.move_speed
+            if self.rect.left <= 0:
+                self.move_right = 1
+            if self.rect.right >= SCREEN_WIDTH:
+                self.move_right = 0
+            self.rect.centerx = int(self.x)
 
         if (self.mode == 1):
             pressed_keys = pygame.key.get_pressed()
@@ -332,7 +352,7 @@ class Player(pygame.sprite.Sprite):
         self.path_history.append([current_time, self.rect.centerx, self.rect.centery])
         
     def reset_pos(self):
-        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.x = self.rect.centerx
         self.y = self.rect.centery
         self.dest_x = -1
@@ -360,7 +380,7 @@ class Projectile(pygame.sprite.Sprite):
         self.y = self.initial_y
         self.miss_x = -1
         self.miss_y = -1
-        self.game_area = pygame.Rect(0,0,720,900)
+        self.game_area = pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
         self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (20,20))
         self.image = pygame.transform.rotate(self.image, 180)
@@ -406,6 +426,7 @@ class Projectile(pygame.sprite.Sprite):
             write_csv(data)
             env.reward += self.calculate_reward(True, rect)
             env.shots_taken += 1
+            env.E1.reloading = 0
             self.kill()
 
         if (self.rect.top > rect.bottom and self.miss_x == -1 and self.miss_y == -1):
@@ -442,6 +463,7 @@ class Projectile(pygame.sprite.Sprite):
             write_csv(data)
             env.reward += self.calculate_reward(False, rect)
             env.shots_taken += 1
+            env.E1.reloading = 0
             self.kill()
         return
 
