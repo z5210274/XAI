@@ -26,9 +26,9 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
  
 # Screen information
-SCREEN_WIDTH = 720
-SCREEN_HEIGHT = 900
-game_area = pygame.Rect(0,0,720,900)
+SCREEN_WIDTH = 360
+SCREEN_HEIGHT = 450
+game_area = pygame.Rect(0,0,360,450)
  
 DISPLAYSURF = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
 DISPLAYSURF.fill(WHITE)
@@ -215,7 +215,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__() 
         self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
         self.rect = self.image.get_rect()
-        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.dest_x = -1
         self.dest_y = -1
         self.x = self.rect.centerx
@@ -226,12 +226,16 @@ class Player(pygame.sprite.Sprite):
         self.move_speed = 2
         self.path_history = []
         self.mode = 0
+        self.move_right = 1
  
     def update(self, current_time):
         self.update_path_history(current_time)
         
         if (self.mode == 0):
-            if (self.dest_x == -1 and self.dest_y == -1):
+
+############################# Random Movement ##################################
+
+            '''if (self.dest_x == -1 and self.dest_y == -1):
                 #self.dest_x = random.randint(0,SCREEN_WIDTH)
                 #self.dest_y = random.randint(0,SCREEN_HEIGHT)
 
@@ -275,7 +279,19 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
             else:
                 self.dest_x = -1
-                self.dest_y = -1
+                self.dest_y = -1'''
+
+############################# Left and right Movement ##################################
+
+            if self.move_right == 1:
+                self.x += self.move_speed
+            if self.move_right == 0:
+                self.x -= self.move_speed
+            if self.rect.left <= 0:
+                self.move_right = 1
+            if self.rect.right >= SCREEN_WIDTH:
+                self.move_right = 0
+            self.rect.centerx = int(self.x)
 
         if (self.mode == 1):
             pressed_keys = pygame.key.get_pressed()
@@ -305,7 +321,7 @@ class Player(pygame.sprite.Sprite):
         self.path_history.append([current_time, self.rect.centerx, self.rect.centery])
         
     def reset_pos(self):
-        self.rect.center = (SCREEN_WIDTH/2, 700)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.x = self.rect.centerx
         self.y = self.rect.centery
         self.dest_x = -1
