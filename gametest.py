@@ -266,7 +266,7 @@ class Player(pygame.sprite.Sprite):
 
 ############################# Random Movement ##################################
 
-            '''if (self.dest_x == -1 and self.dest_y == -1):
+            if (self.dest_x == -1 and self.dest_y == -1):
                 #self.dest_x = random.randint(0,SCREEN_WIDTH)
                 #self.dest_y = random.randint(0,SCREEN_HEIGHT)
 
@@ -310,19 +310,9 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
             else:
                 self.dest_x = -1
-                self.dest_y = -1'''
+                self.dest_y = -1
 
-############################# Left and right Movement ##################################
-
-            if self.move_right == 1:
-                self.x += self.move_speed
-            if self.move_right == 0:
-                self.x -= self.move_speed
-            if self.rect.left <= 0:
-                self.move_right = 1
-            if self.rect.right >= SCREEN_WIDTH:
-                self.move_right = 0
-            self.rect.centerx = int(self.x)
+############################# Random Movement ##################################
 
         if (self.mode == 1):
             pressed_keys = pygame.key.get_pressed()
