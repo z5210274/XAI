@@ -50,7 +50,7 @@ def write_csv(new_data):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (25,25))
         #self.image = pygame.transform.rotate(self.image, 180)
         self.rect = self.image.get_rect() 
         self.rect.center = (SCREEN_WIDTH/2, 80)
@@ -239,9 +239,9 @@ class Enemy(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (25,25))
         self.rect = self.image.get_rect()
-        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
+        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 15)
         self.dest_x = -1
         self.dest_y = -1
         self.x = self.rect.centerx
@@ -253,6 +253,8 @@ class Player(pygame.sprite.Sprite):
         self.path_history = []
         self.mode = 0
         self.move_right = 1
+        self.move_up = 1
+        self.juke = -1
 
     def reset(self):
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
@@ -265,15 +267,38 @@ class Player(pygame.sprite.Sprite):
         if (self.mode == 0):
 
 ############################# Left and right Movement ##################################
+            if self.dest_x == -1 and self.dest_y == -1:
+                self.y += self.move_speed
+                if self.rect.bottom >= SCREEN_HEIGHT:
+                    self.dest_x = SCREEN_WIDTH
+                    self.dest_y = SCREEN_HEIGHT*3/4
+            else:
+                line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
+                self.theta = getAngle(line[1], line[0])
 
-            if self.move_right == 1:
-                self.x += self.move_speed
-            if self.move_right == 0:
-                self.x -= self.move_speed
-            if self.rect.left <= 0:
-                self.move_right = 1
-            if self.rect.right >= SCREEN_WIDTH:
-                self.move_right = 0
+                if (self.theta > 360):
+                    self.theta = self.theta - 360
+
+                self.x_vel = math.cos(self.theta * (2*math.pi/360)) * self.move_speed
+                self.y_vel = math.sin(self.theta * (2*math.pi/360)) * self.move_speed
+
+                if self.rect.left <= 0:
+                    self.dest_x = SCREEN_WIDTH/2
+                    self.dest_y = SCREEN_HEIGHT
+                if self.rect.right >= SCREEN_WIDTH:
+                    self.dest_x = SCREEN_WIDTH/2
+                    self.dest_y = SCREEN_HEIGHT/2
+                if self.rect.top <= SCREEN_HEIGHT/2:
+                    self.dest_x = 0
+                    self.dest_y = SCREEN_HEIGHT*3/4
+                if self.rect.bottom >= SCREEN_HEIGHT:
+                    self.dest_x = SCREEN_WIDTH
+                    self.dest_y = SCREEN_HEIGHT*3/4
+
+                self.x += self.x_vel
+                self.y += self.y_vel
+
+            self.rect.centery = int(self.y)
             self.rect.centerx = int(self.x)
 
 ############################# Left and Right Movement ##################################
@@ -336,7 +361,7 @@ class Projectile(pygame.sprite.Sprite):
         self.miss_y = -1
         self.game_area = pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
-        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (20,20))
+        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (10,10))
         self.image = pygame.transform.rotate(self.image, 180)
 
         self.rect = self.image.get_rect()
@@ -430,17 +455,17 @@ class Projectile(pygame.sprite.Sprite):
         if hit == True:
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
 
-            reward = 5*(min(aimer_dist/400,2))
+            reward = 5*(min(aimer_dist/200,2))
 
             reward = min(reward,10)
 
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
-            if aimer_dist >= 400:
-                    reward = -5*(proj_dist/400)*(max(800/aimer_dist,2))
+            if aimer_dist >= 420:
+                    reward = -5*(proj_dist/200)*(max(400/aimer_dist,2))
             else:
-                reward = -5*(proj_dist/400)*(max(400/aimer_dist,2))
+                reward = -5*(proj_dist/200)*(max(200/aimer_dist,2))
 
             reward = max(reward,-10)
 

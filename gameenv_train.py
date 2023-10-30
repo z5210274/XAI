@@ -28,7 +28,7 @@ from time import time
 from pygame.locals import *
 from projectile import *
 
-from gametest import Enemy, Player, Projectile
+from gametest_social import Enemy, Player, Projectile
 
 #################################################################################################
 #################################################################################################
@@ -135,11 +135,7 @@ class GameEnvironment(gym.Env):
         '''if self.reward > 300:
             done = True
         elif self.reward < -300:
-            done = True
-        elif self.shots_taken >= 100:
-            done = True
-        else:
-            done = False'''
+            done = True'''
         
         if self.shots_taken >= 10:
             done = True
@@ -308,11 +304,11 @@ def stack_frames(stacked_frames, state, is_new_episode):
 #################################################################################################
 
 register(
-    id='Projectile_Predictor',
+    id='Projectile_Predictor-train',
     entry_point='gameenv:GameEnvironment',
 )
 
-env = gym.make('Projectile_Predictor')
+env = gym.make('Projectile_Predictor-train')
 env = gym.wrappers.ResizeObservation(env, 84)
 state, watever = env.reset()
 env.render([0,0],[0,0])

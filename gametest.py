@@ -50,7 +50,7 @@ def write_csv(new_data):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (25,25))
         #self.image = pygame.transform.rotate(self.image, 180)
         self.rect = self.image.get_rect() 
         self.rect.center = (SCREEN_WIDTH/2, 80)
@@ -239,7 +239,7 @@ class Enemy(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (25,25))
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.dest_x = -1
@@ -253,6 +253,7 @@ class Player(pygame.sprite.Sprite):
         self.path_history = []
         self.mode = 0
         self.move_right = 1
+        self.juke = -1
 
     def reset(self):
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
@@ -372,7 +373,7 @@ class Projectile(pygame.sprite.Sprite):
         self.miss_y = -1
         self.game_area = pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT)
 
-        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (20,20))
+        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (10,10))
         self.image = pygame.transform.rotate(self.image, 180)
 
         self.rect = self.image.get_rect()
@@ -466,17 +467,17 @@ class Projectile(pygame.sprite.Sprite):
         if hit == True:
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
 
-            reward = 5*(min(aimer_dist/400,2))
+            reward = 5*(min(aimer_dist/200,2))
 
             reward = min(reward,10)
 
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
-            if aimer_dist >= 400:
-                    reward = -5*(proj_dist/400)*(max(800/aimer_dist,2))
+            if aimer_dist >= 420:
+                    reward = -5*(proj_dist/200)*(max(400/aimer_dist,2))
             else:
-                reward = -5*(proj_dist/400)*(max(400/aimer_dist,2))
+                reward = -5*(proj_dist/200)*(max(200/aimer_dist,2))
 
             reward = max(reward,-10)
 
