@@ -448,7 +448,7 @@ class Projectile(pygame.sprite.Sprite):
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
-            if aimer_dist >= 420:
+            if aimer_dist >= 210:
                     reward = -5*(proj_dist/200)*(max(400/aimer_dist,2))
             else:
                 reward = -5*(proj_dist/200)*(max(200/aimer_dist,2))

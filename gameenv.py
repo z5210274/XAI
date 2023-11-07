@@ -143,7 +143,7 @@ class GameEnvironment(gym.Env):
         else:
             done = False'''
         
-        if self.shots_taken >= 10:
+        if self.shots_taken >= 40:
             done = True
         else:
             done = False

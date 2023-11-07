@@ -14,9 +14,12 @@ pygame.init()
 clock = pygame.time.Clock()
 current_time = 0
 
-filename = './data.csv'
+filename = './human.csv'
 FPS = 240
 FramePerSec = pygame.time.Clock()
+
+SPRITE_SIZE = 25
+BULLET_SIZE = 10
  
 # Predefined some colors
 BLUE  = (0, 0, 255)
@@ -56,7 +59,7 @@ def write_csv(new_data):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Enemy.png"), (SPRITE_SIZE,SPRITE_SIZE))
         #self.image = pygame.transform.rotate(self.image, 180)
         self.rect = self.image.get_rect() 
         self.rect.center = (SCREEN_WIDTH/2, 80)
@@ -142,7 +145,7 @@ class Enemy(pygame.sprite.Sprite):
         self.y = self.rect.centery
 
     def strategize(self, player_x, player_y, path_history):
-        neuro_x = path_history[0][1] - player_x
+        '''neuro_x = path_history[0][1] - player_x
         neuro_y = path_history[0][2] - player_y
         dist_neuro = math.sqrt(neuro_x**2 + neuro_y**2)
         neuro_weight = self.neuro*dist_neuro
@@ -167,7 +170,9 @@ class Enemy(pygame.sprite.Sprite):
             self.aim_text = 'Social'
         else:
             self.aim_mode = 2
-            self.aim_text = 'Cultural'
+            self.aim_text = 'Cultural'''
+
+        self.aim_mode = random.randint(0,3)
 
 
     def take_shot(self, player_x, player_y, path_history, theta):
@@ -213,7 +218,7 @@ class Enemy(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (50,50))
+        self.image = pygame.transform.scale(pygame.image.load("Player.png"), (SPRITE_SIZE,SPRITE_SIZE))
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.dest_x = -1
@@ -235,7 +240,7 @@ class Player(pygame.sprite.Sprite):
 
 ############################# Random Movement ##################################
 
-            '''if (self.dest_x == -1 and self.dest_y == -1):
+            if (self.dest_x == -1 and self.dest_y == -1):
                 #self.dest_x = random.randint(0,SCREEN_WIDTH)
                 #self.dest_y = random.randint(0,SCREEN_HEIGHT)
 
@@ -244,7 +249,7 @@ class Player(pygame.sprite.Sprite):
                 
                 if (self.dest_x < 0):
                     self.dest_x = abs(self.dest_x)
-                if (self.dest_y < 0):
+                if (self.dest_y < SCREEN_HEIGHT/2):
                     self.dest_y = abs(self.dest_y)
                 if (self.dest_x > SCREEN_WIDTH):
                     self.dest_x += -random.randint(0,150)
@@ -260,14 +265,14 @@ class Player(pygame.sprite.Sprite):
                 self.x_vel = math.cos(self.theta * (2*math.pi/360)) * self.move_speed
                 self.y_vel = math.sin(self.theta * (2*math.pi/360)) * self.move_speed
 
-            if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < 0 or self.rect.bottom > SCREEN_HEIGHT):
+            if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < SCREEN_HEIGHT/2 or self.rect.bottom > SCREEN_HEIGHT):
                 self.dest_x = -1
                 self.dest_y = -1
                 if (self.rect.left < 0):
                     self.rect.move_ip(1,0)
                 elif (self.rect.right > SCREEN_WIDTH):
                     self.rect.move_ip(-1,0)
-                elif (self.rect.top < 0):
+                elif (self.rect.top < SCREEN_HEIGHT/2):
                     self.rect.move_ip(0,1)
                 elif (self.rect.bottom > SCREEN_HEIGHT):
                     self.rect.move_ip(0,-1)
@@ -279,11 +284,11 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
             else:
                 self.dest_x = -1
-                self.dest_y = -1'''
+                self.dest_y = -1
 
 ############################# Left and right Movement ##################################
 
-            if self.move_right == 1:
+            '''if self.move_right == 1:
                 self.x += self.move_speed
             if self.move_right == 0:
                 self.x -= self.move_speed
@@ -291,7 +296,7 @@ class Player(pygame.sprite.Sprite):
                 self.move_right = 1
             if self.rect.right >= SCREEN_WIDTH:
                 self.move_right = 0
-            self.rect.centerx = int(self.x)
+            self.rect.centerx = int(self.x)'''
 
         if (self.mode == 1):
             pressed_keys = pygame.key.get_pressed()
@@ -351,7 +356,7 @@ class Projectile(pygame.sprite.Sprite):
         self.miss_y = -1
         self.game_area = game_area
 
-        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (20,20))
+        self.image = pygame.transform.scale(pygame.image.load("Bullet.png"), (BULLET_SIZE,BULLET_SIZE))
         self.image = pygame.transform.rotate(self.image, 180)
 
         self.rect = self.image.get_rect()
@@ -444,12 +449,16 @@ font = pygame.font.SysFont(None,16)
 text = font.render('Aim mode: ' + str(E1.aim_mode), True, BLACK)
 textRect = text.get_rect()
 textRect.center = (50, 50)
+auto_shoot = 0
  
 while True:     
     text = font.render('Aim mode: ' + str(E1.aim_text), True, BLACK)
     aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
     line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
     theta = getAngle(line[1], line[0])
+    if auto_shoot == 1:
+        bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
+        projectile_group.add(bullet)
     if (theta > 360):
         theta = theta - 360
     for event in pygame.event.get():              
@@ -457,6 +466,12 @@ while True:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_0:
+                if auto_shoot == 0:
+                    auto_shoot = 1
+                    print(auto_shoot)
+                elif auto_shoot == 1:
+                    auto_shoot = 0
             if event.key == pygame.K_SPACE:
                 bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
                 projectile_group.add(bullet)
