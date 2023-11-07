@@ -28,7 +28,7 @@ from time import time
 from pygame.locals import *
 from projectile import *
 
-from gametest_neuro import Enemy, Player, Projectile
+from gametest import Enemy, Player, Projectile
 
 #################################################################################################
 #################################################################################################

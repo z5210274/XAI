@@ -449,24 +449,27 @@ class Projectile(pygame.sprite.Sprite):
     def draw(self, surface):
         surface.blit(self.image, self.rect)  
 
-    def calculate_reward(self, hit, rect):
+    def calculate_reward(self, hit, rect, path_history, enemy_x, enemy_y):
         reward = 0
 
         if hit == True:
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
 
-            reward = 5*(min(aimer_dist/200,2))
+            reward = 10*(max(aimer_dist/10,2))
 
-            reward = min(reward,10)
+            reward = max(reward,20)
 
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
-            if aimer_dist >= 210:
-                    reward = -5*(proj_dist/200)*(max(400/aimer_dist,2))
-            else:
-                reward = -5*(proj_dist/200)*(max(200/aimer_dist,2))
 
-            reward = max(reward,-10)
+            reward = -5*(proj_dist/100)*(min(100/aimer_dist,1))
+
+            reward = max(reward,-5)
+
+        '''if hit == True:
+            reward = 20
+        else:
+            reward = -5'''
 
         return reward

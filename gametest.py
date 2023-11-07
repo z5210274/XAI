@@ -461,7 +461,7 @@ class Projectile(pygame.sprite.Sprite):
     def draw(self, surface):
         surface.blit(self.image, self.rect)  
 
-    def calculate_reward(self, hit, rect, path_history, enemy_x. enemy_y):
+    def calculate_reward(self, hit, rect, path_history, enemy_x, enemy_y):
         reward = 0
 
         if hit == True:
@@ -479,12 +479,9 @@ class Projectile(pygame.sprite.Sprite):
 
             reward = max(reward,-5)
 
-        # Calculate time of projectile flight
-        # 
-
         '''if hit == True:
             reward = 20
         else:
-            reward = -5
+            reward = -5'''
 
-        return reward'''
+        return reward
