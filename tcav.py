@@ -4,6 +4,7 @@ import pandas as pd
 import sklearn
 import matplotlib.pyplot as plt 
 import numpy as np
+import random
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
@@ -47,9 +48,9 @@ base_logmodel.fit(x_basetrain,y_basetrain)
 
 prediction = base_logmodel.predict(x_basetest)
 
-print(classification_report(y_basetest,prediction))
-print(accuracy_score(y_basetest,prediction))
-print(confusion_matrix(y_basetest,prediction))
+#print(classification_report(y_basetest,prediction))
+#print(accuracy_score(y_basetest,prediction))
+#print(confusion_matrix(y_basetest,prediction))
 
 # Train with Concept set
 
@@ -65,9 +66,9 @@ social_logmodel.fit(x_socialtrain,y_socialtrain)
 
 prediction = social_logmodel.predict(x_socialtest)
 
-print(classification_report(y_socialtest,prediction))
-print(accuracy_score(y_socialtest,prediction))
-print(confusion_matrix(y_socialtest,prediction))
+#print(classification_report(y_socialtest,prediction))
+#print(accuracy_score(y_socialtest,prediction))
+#print(confusion_matrix(y_socialtest,prediction))
 
 # Train with off-concept set
 
@@ -80,8 +81,8 @@ y_culturaldata = y_cultural.to_numpy()
 # Log model to find activation difference between random and concept
 # (PUT Label to classify between random and concept and train to classify which is concept)
 
-print(base_logmodel.coef_)
-print(social_logmodel.coef_)
+#print(base_logmodel.coef_)
+#print(social_logmodel.coef_)
 df_social['Concept'] = np.ones(len(df_social), dtype=int)
 df_base['Concept'] = np.zeros(len(df_base), dtype=int)
 df_cultural['Concept'] = np.zeros(len(df_cultural), dtype=int)
@@ -113,7 +114,10 @@ print(classification_report(y_concepttest,concept_prediction))
 print(accuracy_score(y_concepttest,concept_prediction))
 print(confusion_matrix(y_concepttest,concept_prediction))
 
-concept_coef = concept_logmodel.coef_
+concept_coef = concept_logmodel.coef_[0]
+concept_coef = np.resize(concept_coef, concept_coef.size - 1)
+concept_hitweight = concept_logmodel.coef_[0][9]
+concept_bias = concept_logmodel.intercept_
 
 df_socialpos = df_social.loc[df_social['Hit'] == 1]
 df_socialpos = df_socialpos.drop('Hit', axis=1)
@@ -122,16 +126,28 @@ df_socialpos = df_socialpos.drop('Concept', axis=1)
 concept_avg = np.mean(df_socialpos, axis=0)
 print(concept_avg)
 
-concept_examples = []
-for i in range(0,len(concept_coef)):
-    scaled = concept_coef[i]*concept_avg[i]
-    concept_examples.append(scaled)
-
 print(concept_coef)
+print(concept_hitweight, concept_bias)
+# See if hitweight is passed a threshold 50%, if so then check using hitavg, move theta away/to player_final_pos based on hitweight * hitavg
 
 # Generate visualization of concept
 
+concept_ranges = []
+for i in range(0,len(concept_coef)):
+    scaled = (10*concept_coef[i]*concept_avg[i])+concept_avg[i]
+    concept_ranges.append(scaled)
 
+tcav = []
+for i in range(0,len(concept_ranges)):
+    low = min(int(concept_avg[i]), int(concept_ranges[i]))
+    high = max(int(concept_avg[i]), int(concept_ranges[i]))
+    if (low != high):
+        generated = random.randrange(low, high)
+    else: 
+        generated = low
+    tcav.append(generated)
+
+print(tcav)
 
 # Test conceptual sentivity with user defined off-concept
 
@@ -140,9 +156,9 @@ y_total2 = np.append(y_cculturaldata,y_csocialdata, axis=0)
 
 concept_prediction2 = concept_logmodel.predict(x_total2)
 
-'''print(classification_report(y_total2,concept_prediction2))
+print(classification_report(y_total2,concept_prediction2))
 print(accuracy_score(y_total2,concept_prediction2))
-print(confusion_matrix(y_total2,concept_prediction2))'''
+print(confusion_matrix(y_total2,concept_prediction2))
 
 # Conceptual sensitivity by % prediction through concept_model and actual (state + action/q-values) user wants explained
 
