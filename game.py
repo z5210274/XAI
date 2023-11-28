@@ -9,12 +9,14 @@ from re import X
 from time import time
 from pygame.locals import *
 from projectile import *
+from tcav import run_tcav
  
 pygame.init()
 clock = pygame.time.Clock()
 current_time = 0
 
 filename = './human.csv'
+filename2 = './tcav.csv'
 FPS = 240
 FramePerSec = pygame.time.Clock()
 
@@ -38,7 +40,9 @@ DISPLAYSURF.fill(WHITE)
 pygame.display.set_caption("Game")
 
 check_file = os.path.isfile(filename)
-print("data.csv exists: " + str(check_file))
+print("human.csv exists: " + str(check_file))
+check_file2 = os.path.isfile(filename2)
+print("tcav.csv exists: " + str(check_file2))
 
 def write_csv(new_data):
     field_names = ["Shooter_x_pos","Shooter_y_pos",
@@ -49,6 +53,18 @@ def write_csv(new_data):
                 "Hit"]
     dict = new_data
     with open(filename, 'a') as file:
+        dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
+        dict_object.writerow(dict)
+
+def write_csv2(new_data):
+    field_names = ["Shooter_x_pos","Shooter_y_pos",
+                "Projectile_x_pos","Projectile_y_pos",
+                "Player_x_pos_current","Player_y_pos_current",
+                "Player_x_pos_initial","Player_y_pos_initial",
+                "Theta",
+                "Hit"]
+    dict = new_data
+    with open(filename2, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
         dict_object.writerow(dict)
 
@@ -207,6 +223,13 @@ class Enemy(pygame.sprite.Sprite):
             y = self.y + self.projectile_range*math.sin(theta)
         
         return (x,y)
+
+    def tcav_set(self,x,y,theta):
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.x = self.rect.centerx 
+        self.y = self.rect.centery
+        self.theta = theta
  
     def draw(self, surface):
         surface.blit(self.image, self.rect) 
@@ -331,6 +354,35 @@ class Player(pygame.sprite.Sprite):
         self.y = self.rect.centery
         self.dest_x = -1
         self.dest_y = -1
+
+    def tcav_set(self,x,y):
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.x = self.rect.centerx
+        self.y = self.rect.centery
+
+    def tcav_update(self,end_x,end_y,start_x,start_y, length):
+        engine_mode = False
+
+        line = [(start_x, start_y),(end_x, end_y)]
+        theta = getAngle(line[1], line[0])
+
+        if (theta > 360):
+            theta = theta - 360
+
+        x_vel = math.cos(theta * (2*math.pi/360)) * self.move_speed
+        y_vel = math.sin(theta * (2*math.pi/360)) * self.move_speed
+        
+        self.x += x_vel
+        self.y += y_vel
+
+        self.rect.centerx = int(self.x)
+        self.rect.centery = int(self.y)
+
+        if (length == 0):
+            engine_mode = True
+
+        return engine_mode
  
     def draw(self, surface):
         surface.blit(self.image, self.rect)    
@@ -450,45 +502,88 @@ text = font.render('Aim mode: ' + str(E1.aim_mode), True, BLACK)
 textRect = text.get_rect()
 textRect.center = (50, 50)
 auto_shoot = 0
+
+engine_mode = True
+tcav_initialized = False
+tcav = []
  
 while True:     
-    text = font.render('Aim mode: ' + str(E1.aim_text), True, BLACK)
-    aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
-    line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
-    theta = getAngle(line[1], line[0])
-    if auto_shoot == 1:
-        bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
-        projectile_group.add(bullet)
-    if (theta > 360):
-        theta = theta - 360
-    for event in pygame.event.get():              
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_0:
-                if auto_shoot == 0:
-                    auto_shoot = 1
-                    print(auto_shoot)
-                elif auto_shoot == 1:
-                    auto_shoot = 0
-            if event.key == pygame.K_SPACE:
-                bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
-                projectile_group.add(bullet)
-            if event.key == pygame.K_r: # Clear projectile cache
-                projectile_group.empty()
-            if event.key == pygame.K_p:
-                P1.reset_pos()
-            if event.key == pygame.K_o:
-                if (P1.mode == 0):
-                    P1.mode = 1
-                else:
-                    P1.mode = 0
-            if event.key == pygame.K_m:
-                if (E1.auto == 0):
-                    E1.auto = 1
-                else:
-                    E1.auto = 0
+    if engine_mode == True:
+        text = font.render('Aim mode: ' + str(E1.aim_text), True, BLACK)
+        aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
+        line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
+        theta = getAngle(line[1], line[0])
+        if auto_shoot == 1:
+            bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
+            projectile_group.add(bullet)
+        if (theta > 360):
+            theta = theta - 360
+        for event in pygame.event.get():              
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_0:
+                    if auto_shoot == 0:
+                        auto_shoot = 1
+                        print(auto_shoot)
+                    elif auto_shoot == 1:
+                        auto_shoot = 0
+                if event.key == pygame.K_SPACE:
+                    bullet = E1.take_shot(P1.rect.centerx, P1.rect.centery, P1.path_history, theta)
+                    projectile_group.add(bullet)
+                if event.key == pygame.K_r: # Clear projectile cache
+                    projectile_group.empty()
+                if event.key == pygame.K_p:
+                    P1.reset_pos()
+                if event.key == pygame.K_o:
+                    if (P1.mode == 0):
+                        P1.mode = 1
+                    else:
+                        P1.mode = 0
+                if event.key == pygame.K_m:
+                    if (E1.auto == 0):
+                        E1.auto = 1
+                    else:
+                        E1.auto = 0
+                if event.key == pygame.K_t:
+                    tcav = run_tcav()
+                    engine_mode = False
+                    tcav_initialized = False
+                if event.key == pygame.K_x:
+                    engine_mode = False
+                    tcav_initialized = False
+                if event.key == pygame.K_z:
+                    data = {"Shooter_x_pos": tcav[0], 
+                    "Shooter_y_pos": tcav[1],
+                    "Projectile_x_pos": tcav[2],
+                    "Projectile_y_pos": tcav[3], 
+                    "Player_x_pos_current": tcav[4],
+                    "Player_y_pos_current": tcav[5],
+                    "Player_x_pos_initial": tcav[6],
+                    "Player_y_pos_initial": tcav[7],
+                    "Theta": tcav[8],
+                    "Hit": 0}
+
+                    write_csv2(data)
+
+        current_time = pygame.time.get_ticks()
+        P1.update(current_time)
+        E1.update(theta)
+        projectile_group.update(P1.rect, E1)
+    if engine_mode == False:
+        aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
+        line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
+        pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
+        if tcav_initialized == False:
+            E1.tcav_set(tcav[0],tcav[1],tcav[8])
+            bullet = E1.take_shot(tcav[6],tcav[7],[],tcav[8])
+            projectile_group.add(bullet)
+            P1.tcav_set(tcav[6],tcav[7])
+            tcav_initialized = True
+        else:
+            engine_mode = P1.tcav_update(tcav[4],tcav[5],tcav[6],tcav[7],len(projectile_group))
+            projectile_group.update(P1.rect, E1)
 
     DISPLAYSURF.fill(WHITE)
     DISPLAYSURF.blit(text, textRect)
@@ -497,13 +592,9 @@ while True:
     pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
     projectile_group.draw(DISPLAYSURF)
     
-    current_time = pygame.time.get_ticks()
-    P1.update(current_time)
     if (E1.auto == 1):
         if (len(P1.path_history) > 1000):
             E1.strategize(P1.rect.centerx, P1.rect.centery, P1.path_history)
-    E1.update(theta)
-    projectile_group.update(P1.rect, E1)
          
     pygame.display.update()
     FramePerSec.tick(FPS)
