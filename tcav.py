@@ -49,8 +49,8 @@ def run_tcav():
 
     prediction = base_logmodel.predict(x_basetest)
 
-    #print(classification_report(y_basetest,prediction))
-    #print(accuracy_score(y_basetest,prediction))
+    print(classification_report(y_basetest,prediction))
+    print(accuracy_score(y_basetest,prediction))
     #print(confusion_matrix(y_basetest,prediction))
 
     # Train with Concept set
@@ -67,8 +67,8 @@ def run_tcav():
 
     prediction = social_logmodel.predict(x_socialtest)
 
-    #print(classification_report(y_socialtest,prediction))
-    #print(accuracy_score(y_socialtest,prediction))
+    print(classification_report(y_socialtest,prediction))
+    print(accuracy_score(y_socialtest,prediction))
     #print(confusion_matrix(y_socialtest,prediction))
 
     # Train with off-concept set
@@ -161,7 +161,6 @@ def run_tcav():
     print(accuracy_score(y_total2,concept_prediction2))
     print(confusion_matrix(y_total2,concept_prediction2))
 
-    return(tcav)
+    return(tcav, concept_logmodel.coef_[0])
 
     # Conceptual sensitivity by % prediction through concept_model and actual (state + action/q-values) user wants explained
-

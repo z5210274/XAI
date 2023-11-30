@@ -506,6 +506,7 @@ auto_shoot = 0
 engine_mode = True
 tcav_initialized = False
 tcav = []
+coef = []
  
 while True:     
     if engine_mode == True:
@@ -547,22 +548,22 @@ while True:
                     else:
                         E1.auto = 0
                 if event.key == pygame.K_t:
-                    tcav = run_tcav()
+                    tcav, coef = run_tcav()
                     engine_mode = False
                     tcav_initialized = False
                 if event.key == pygame.K_x:
                     engine_mode = False
                     tcav_initialized = False
                 if event.key == pygame.K_z:
-                    data = {"Shooter_x_pos": tcav[0], 
-                    "Shooter_y_pos": tcav[1],
-                    "Projectile_x_pos": tcav[2],
-                    "Projectile_y_pos": tcav[3], 
-                    "Player_x_pos_current": tcav[4],
-                    "Player_y_pos_current": tcav[5],
-                    "Player_x_pos_initial": tcav[6],
-                    "Player_y_pos_initial": tcav[7],
-                    "Theta": tcav[8],
+                    data = {"Shooter_x_pos": coef[0], 
+                    "Shooter_y_pos": coef[1],
+                    "Projectile_x_pos": coef[2],
+                    "Projectile_y_pos":coef[3], 
+                    "Player_x_pos_current": coef[4],
+                    "Player_y_pos_current": coef[5],
+                    "Player_x_pos_initial": coef[6],
+                    "Player_y_pos_initial": coef[7],
+                    "Theta": coef[8],
                     "Hit": 0}
 
                     write_csv2(data)
