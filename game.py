@@ -14,6 +14,10 @@ from tcav import run_tcav
 pygame.init()
 clock = pygame.time.Clock()
 current_time = 0
+collectable_time = 0
+obstacle_time = 0
+collectable_spawn_time = random.randint(2,5)
+obstacle_spawn_time = random.randint(7,10)
 
 filename = './human.csv'
 filename2 = './tcav.csv'
@@ -50,6 +54,7 @@ def write_csv(new_data):
                 "Player_x_pos_current","Player_y_pos_current",
                 "Player_x_pos_initial","Player_y_pos_initial",
                 "Theta",
+                #"Blocked",
                 "Hit"]
     dict = new_data
     with open(filename, 'a') as file:
@@ -255,6 +260,7 @@ class Player(pygame.sprite.Sprite):
         self.path_history = []
         self.mode = 0
         self.move_right = 1
+        self.boosted = 0
  
     def update(self, current_time):
         self.update_path_history(current_time)
@@ -425,6 +431,22 @@ class Projectile(pygame.sprite.Sprite):
         if (self.theta + 90 > 360):
             self.theta = self.theta - 360
 
+        for block in obstacle_group:
+            if (block.rect.collidelistall([self.rect])):
+                data = {"Shooter_x_pos": self.initial_x, 
+                    "Shooter_y_pos": self.initial_y,
+                    "Projectile_x_pos": self.rect.centerx,
+                    "Projectile_y_pos": self.rect.centery, 
+                    "Player_x_pos_current": rect.centerx,
+                    "Player_y_pos_current": rect.centery,
+                    "Player_x_pos_initial": self.player_x,
+                    "Player_y_pos_initial": self.player_y,
+                    "Theta": round(self.theta, 2),
+                    #"Blocked": 1,
+                    "Hit": 0}
+                write_csv(data)
+                self.kill()
+
         if (rect.collidelistall([self.rect])):
 
             data = {"Shooter_x_pos": self.initial_x, 
@@ -436,6 +458,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
+                    #"Blocked": 0,
                     "Hit": 1}
 
             if (self.aim_mode == 0):
@@ -470,6 +493,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
+                    #"Blocked": 0,
                     "Hit": 0}
 
             if (self.aim_mode == 0):
@@ -493,15 +517,83 @@ class Projectile(pygame.sprite.Sprite):
 #################################################################################################
 #################################################################################################
 #################################################################################################
+
+class Boost(pygame.sprite.Sprite):
+    def __init__(self, x, y, type, death):
+        super().__init__()
+        self.type = type
+        if (self.type == 0):
+            self.image = pygame.transform.scale(pygame.image.load("pointorb.png"), (10,10))
+        if (self.type == 1):
+            self.image = pygame.transform.scale(pygame.image.load("boostorb.png"), (10,10))
+
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.life = 0
+        self.death = death
+        
+    def update(self, player_rect, player):
+        self.life += 1
+        if (player_rect.collidelistall([self.rect])):
+            if (self.type == 0):
+                reward = 0
+            if (self.type == 1):
+                if (player.boosted == 0):
+                    player.move_speed = player.move_speed*1.5
+                    player.boosted = 1
+            self.kill()
+        if (self.life == self.death*100):
+            self.kill()
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)  
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
+
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, x, y, death):
+        super().__init__()
+        self.image = pygame.transform.scale(pygame.image.load("Obstacle.png"), (random.randint(2,5)*10,10))
+        self.image = pygame.transform.rotate(self.image, 180)
+
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.life = 0
+        self.death = death
+
+    def reset(self):
+        self.kill()
+ 
+    def update(self):
+        self.life += 1
+
+        if (self.life == self.death*100):
+            self.kill()
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)  
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
          
 P1 = Player()
 E1 = Enemy()
 projectile_group = pygame.sprite.Group()
+collectable_group = pygame.sprite.Group()
+obstacle_group = pygame.sprite.Group()
+
 font = pygame.font.SysFont(None,16)
 text = font.render('Aim mode: ' + str(E1.aim_mode), True, BLACK)
 textRect = text.get_rect()
 textRect.center = (50, 50)
 auto_shoot = 0
+spawn_collectable = 1
+spawn_obstacle = 1
 
 engine_mode = True
 tcav_initialized = False
@@ -535,26 +627,26 @@ while True:
                     projectile_group.add(bullet)
                 if event.key == pygame.K_r: # Clear projectile cache
                     projectile_group.empty()
-                if event.key == pygame.K_p:
+                if event.key == pygame.K_p: # Reset position
                     P1.reset_pos()
-                if event.key == pygame.K_o:
+                if event.key == pygame.K_o: # Target Control
                     if (P1.mode == 0):
                         P1.mode = 1
                     else:
                         P1.mode = 0
-                if event.key == pygame.K_m:
+                if event.key == pygame.K_m: # Aimer control
                     if (E1.auto == 0):
                         E1.auto = 1
                     else:
                         E1.auto = 0
-                if event.key == pygame.K_t:
+                if event.key == pygame.K_t: # Train TCAV
                     tcav, coef = run_tcav()
                     engine_mode = False
                     tcav_initialized = False
-                if event.key == pygame.K_x:
+                if event.key == pygame.K_x: # Reset
                     engine_mode = False
                     tcav_initialized = False
-                if event.key == pygame.K_z:
+                if event.key == pygame.K_z: # Save TCAV
                     data = {"Shooter_x_pos": coef[0], 
                     "Shooter_y_pos": coef[1],
                     "Projectile_x_pos": coef[2],
@@ -569,9 +661,34 @@ while True:
                     write_csv2(data)
 
         current_time = pygame.time.get_ticks()
+
+        if (collectable_time == collectable_spawn_time*100):
+            spawn_collectable = 0
+        if (spawn_collectable == 1):
+            collectable_time += 1
+        if (spawn_collectable == 0):
+            orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(5,7))
+            collectable_group.add(orb)
+            spawn_collectable = 1
+            collectable_spawn_time = random.randint(2,5)
+            collectable_time = 0
+
+        if (obstacle_time == obstacle_spawn_time*100):
+            spawn_obstacle = 0
+        if (spawn_obstacle == 1):
+            obstacle_time += 1
+        if (spawn_obstacle == 0):
+            block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
+            obstacle_group.add(block)
+            spawn_obstacle = 1
+            obstacle_spawn_time = random.randint(7,10)
+            obstacle_time = 0
+
         P1.update(current_time)
         E1.update(theta)
         projectile_group.update(P1.rect, E1)
+        collectable_group.update(P1.rect, P1)
+        obstacle_group.update()
     if engine_mode == False:
         aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
         line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
@@ -592,6 +709,8 @@ while True:
     E1.draw(DISPLAYSURF)
     pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
     projectile_group.draw(DISPLAYSURF)
+    collectable_group.draw(DISPLAYSURF)
+    obstacle_group.draw(DISPLAYSURF)
     
     if (E1.auto == 1):
         if (len(P1.path_history) > 1000):

@@ -9,6 +9,7 @@ from re import X
 from time import time
 from pygame.locals import *
 from projectile import *
+from movement import *
 
 current_time = 0
 
@@ -37,6 +38,7 @@ def write_csv(new_data):
                 "Player_x_pos_current","Player_y_pos_current",
                 "Player_x_pos_initial","Player_y_pos_initial",
                 "Theta",
+                "Blocked",
                 "Hit"]
     dict = new_data
     with open(filename, 'a') as file:
@@ -59,7 +61,7 @@ class Enemy(pygame.sprite.Sprite):
         self.theta = 90
         self.projectile_range = 800
         self.sensitivity = 1
-        self.move_speed = 2
+        self.move_speed = 1
         self.aim_mode = 3 # 0 - Neuro, 1 - Social, 2 - Cultural, 3 - Player
         self.aim_text = 'Player'
         self.auto = 0
@@ -249,71 +251,31 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0
         self.theta = 0
-        self.move_speed = 2
+        self.move_speed = 1
         self.path_history = []
         self.mode = 0
         self.move_right = 1
         self.juke = -1
+        self.dist_travelled = 0
+        self.boosted = -1
 
     def reset(self):
         self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT - 100)
         self.x = self.rect.centerx
         self.y = self.rect.centery
  
-    def update(self, current_time):
+    def update(self, current_time, collectable_group):
         self.update_path_history(current_time)
         
+        if (self.boosted >= 0):
+            self.boosted += 1
+
+            if (self.boosted >= 5000):
+                self.boosted = -1
+                self.move_speed = self.move_speed/1.5
+        
         if (self.mode == 0):
-
-############################# Random Movement ##################################
-
-            if (self.dest_x == -1 and self.dest_y == -1):
-                #self.dest_x = random.randint(0,SCREEN_WIDTH)
-                #self.dest_y = random.randint(0,SCREEN_HEIGHT)
-
-                self.dest_x = self.rect.centerx + random.randint(-200,200)
-                self.dest_y = self.rect.centery + random.randint(-50,50)
-                
-                if (self.dest_x < 0):
-                    self.dest_x = abs(self.dest_x)
-                if (self.dest_y < 0):
-                    self.dest_y = abs(self.dest_y)
-                if (self.dest_x > SCREEN_WIDTH):
-                    self.dest_x += -random.randint(0,150)
-                if (self.dest_y > SCREEN_HEIGHT):
-                    self.dest_y += -random.randint(0,50)
-
-                line = [(self.rect.centerx, self.rect.centery),(self.dest_x, self.dest_y)]
-                self.theta = getAngle(line[1], line[0])
-
-                if (self.theta > 360):
-                    self.theta = self.theta - 360
-
-                self.x_vel = math.cos(self.theta * (2*math.pi/360)) * self.move_speed
-                self.y_vel = math.sin(self.theta * (2*math.pi/360)) * self.move_speed
-
-            if (self.rect.left < 0 or self.rect.right > SCREEN_WIDTH or self.rect.top < 0 or self.rect.bottom > SCREEN_HEIGHT):
-                self.dest_x = -1
-                self.dest_y = -1
-                if (self.rect.left < 0):
-                    self.rect.move_ip(1,0)
-                elif (self.rect.right > SCREEN_WIDTH):
-                    self.rect.move_ip(-1,0)
-                elif (self.rect.top < 0):
-                    self.rect.move_ip(0,1)
-                elif (self.rect.bottom > SCREEN_HEIGHT):
-                    self.rect.move_ip(0,-1)
-            elif (self.rect.centerx != self.dest_x and self.rect.centery != self.dest_y):
-                self.x += self.x_vel
-                self.y += self.y_vel
-
-                self.rect.centerx = int(self.x)
-                self.rect.centery = int(self.y)
-            else:
-                self.dest_x = -1
-                self.dest_y = -1
-
-############################# Random Movement ##################################
+            movement(sys.argv[1], SCREEN_WIDTH, SCREEN_HEIGHT, self, collectable_group)
 
         if (self.mode == 1):
             pressed_keys = pygame.key.get_pressed()
@@ -390,6 +352,25 @@ class Projectile(pygame.sprite.Sprite):
         if (self.theta + 90 > 360):
             self.theta = self.theta - 360
 
+        for block in env.obstacle_group:
+            if (block.rect.collidelistall([self.rect])):
+                data = {"Shooter_x_pos": self.initial_x, 
+                    "Shooter_y_pos": self.initial_y,
+                    "Projectile_x_pos": self.rect.centerx,
+                    "Projectile_y_pos": self.rect.centery, 
+                    "Player_x_pos_current": rect.centerx,
+                    "Player_y_pos_current": rect.centery,
+                    "Player_x_pos_initial": self.player_x,
+                    "Player_y_pos_initial": self.player_y,
+                    "Theta": round(self.theta, 2),
+                    "Blocked": 1,
+                    "Hit": 0}
+                write_csv(data)
+                env.reward -= 10
+                env.shots_taken += 1
+                env.E1.reloading = 0
+                self.kill()
+
         if (rect.collidelistall([self.rect])):
 
             data = {"Shooter_x_pos": self.initial_x, 
@@ -401,6 +382,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
+                    "Blocked": 0,
                     "Hit": 1}
 
             if (self.aim_mode == 0):
@@ -438,6 +420,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
+                    "Blocked": 0,
                     "Hit": 0}
 
             if (self.aim_mode == 0):
@@ -485,3 +468,66 @@ class Projectile(pygame.sprite.Sprite):
             reward = -5'''
 
         return reward
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
+
+class Boost(pygame.sprite.Sprite):
+    def __init__(self, x, y, type, death):
+        super().__init__()
+        self.type = type
+        if (self.type == 0):
+            self.image = pygame.transform.scale(pygame.image.load("pointorb.png"), (10,10))
+        if (self.type == 1):
+            self.image = pygame.transform.scale(pygame.image.load("boostorb.png"), (10,10))
+
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.life = 0
+        self.death = death
+        
+    def update(self, player_rect, env):
+        self.life += 1
+        if (player_rect.collidelistall([self.rect])):
+            if (self.type == 0):
+                env.reward -= 10
+            if (self.type == 1):
+                if (env.P1.boosted == -1):
+                    env.P1.move_speed = env.P1.move_speed*1.5
+                    env.P1.boosted = 0
+            self.kill()
+        if (self.life == self.death*100):
+            self.kill()
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)  
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
+
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, x, y, death):
+        super().__init__()
+        self.image = pygame.transform.scale(pygame.image.load("Obstacle.png"), (random.randint(2,5)*10,10))
+        self.image = pygame.transform.rotate(self.image, 180)
+
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.centery = y
+        self.life = 0
+        self.death = death
+
+    def reset(self):
+        self.kill()
+ 
+    def update(self):
+        self.life += 1
+
+        if (self.life == self.death*100):
+            self.kill()
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)  
