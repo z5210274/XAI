@@ -153,7 +153,7 @@ class GameEnvironment(gym.Env):
         else:
             done = False'''
         
-        if self.shots_taken >= 40:
+        if self.shots_taken >= 20:
             done = True
         else:
             done = False
@@ -200,6 +200,16 @@ class GameEnvironment(gym.Env):
         self.E1.reset()
         self.P1.reset_pos()
         self.projectile_group.empty()
+        
+        for collectable in self.collectable_group:
+            collectable.reset()
+
+        self.collectable_group.empty()
+
+        for obstacle in self.obstacle_group:
+            obstacle.reset()
+
+        self.obstacle_group.empty()
 
         observation = self.get_state()
 
@@ -277,7 +287,7 @@ max_memory_length = 100000
 # Train the model after 4 actions
 update_after_actions = 4
 # How often to update the target network
-update_target_network = 2000
+update_target_network = 5000
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
@@ -437,7 +447,7 @@ if (sys.argv[2] == 'Train'):
                 model_target.save('./model.keras')
                 print("Model Saved")
                 now2 = datetime.datetime.now()
-                data2 = {"Episode": episode_count, "Running_Reward": running_reward, 'Frame_Count': frame_count, "Time": now.time()} 
+                data2 = {"Episode": episode_count, "Running_Reward": running_reward, 'Frame_Count': frame_count, "Time": now2.time()} 
                 write_csv2(data2)
 
             # Limit the state and reward history
@@ -491,10 +501,10 @@ if (sys.argv[2] == 'Train'):
             if (env.spawn_collectable == 1):
                 collectable_time += 1
             if (env.spawn_collectable == 0):
-                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(5,7))
+                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
                 env.collectable_group.add(orb)
                 env.spawn_collectable = 1
-                collectable_spawn_time = random.randint(2,5)
+                collectable_spawn_time = random.randint(6,10)
                 collectable_time = 0
 
             if (obstacle_time == obstacle_spawn_time*100):
@@ -502,10 +512,10 @@ if (sys.argv[2] == 'Train'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,8))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
-                obstacle_spawn_time = random.randint(7,10)
+                obstacle_spawn_time = random.randint(6,10)
                 obstacle_time = 0
 
             env.P1.update(current_time, env.collectable_group)
@@ -530,8 +540,9 @@ if (sys.argv[2] == 'Train'):
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
-        if running_reward > 150:  # Condition to consider the task solved
+        if running_reward > 200:  # Condition to consider the task solved
             print("Solved at episode {}!".format(episode_count))
+            done = True
             break
 
 ############### Test #############################
@@ -603,10 +614,10 @@ if (sys.argv[2] == 'Test'):
             if (env.spawn_collectable == 1):
                 collectable_time += 1
             if (env.spawn_collectable == 0):
-                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(5,7))
+                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
                 env.collectable_group.add(orb)
                 env.spawn_collectable = 1
-                collectable_spawn_time = random.randint(4,7)
+                collectable_spawn_time = random.randint(6,10)
                 collectable_time = 0
 
             if (obstacle_time == obstacle_spawn_time*100):
@@ -614,10 +625,10 @@ if (sys.argv[2] == 'Test'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,8))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
-                obstacle_spawn_time = random.randint(7,10)
+                obstacle_spawn_time = random.randint(6,10)
                 obstacle_time = 0
 
             env.P1.update(current_time, env.collectable_group)

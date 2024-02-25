@@ -38,7 +38,7 @@ def write_csv(new_data):
                 "Player_x_pos_current","Player_y_pos_current",
                 "Player_x_pos_initial","Player_y_pos_initial",
                 "Theta",
-                "Blocked",
+                #"Blocked",
                 "Hit"]
     dict = new_data
     with open(filename, 'a') as file:
@@ -363,7 +363,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
-                    "Blocked": 1,
+                    #"Blocked": 1,
                     "Hit": 0}
                 write_csv(data)
                 env.reward -= 10
@@ -382,7 +382,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
-                    "Blocked": 0,
+                    #"Blocked": 0,
                     "Hit": 1}
 
             if (self.aim_mode == 0):
@@ -420,7 +420,7 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
                     "Theta": round(self.theta, 2),
-                    "Blocked": 0,
+                    #"Blocked": 0,
                     "Hit": 0}
 
             if (self.aim_mode == 0):
@@ -452,7 +452,7 @@ class Projectile(pygame.sprite.Sprite):
 
             reward = 10*(max(aimer_dist/10,2))
 
-            reward = max(reward,20)
+            reward = min(reward,20)
 
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
@@ -487,6 +487,9 @@ class Boost(pygame.sprite.Sprite):
         self.rect.centery = y
         self.life = 0
         self.death = death
+
+    def reset(self):
+        self.kill()
         
     def update(self, player_rect, env):
         self.life += 1
