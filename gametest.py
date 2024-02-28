@@ -450,20 +450,20 @@ class Projectile(pygame.sprite.Sprite):
         if hit == True:
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
 
-            reward = 10*(max(aimer_dist/10,2))
+            reward = 10*(min(aimer_dist/10,5))
 
-            reward = min(reward,20)
+            reward = min(reward,50)
 
         else:
             proj_dist = math.sqrt((self.miss_x - rect.centerx)**2 + (self.miss_y - rect.centery)**2)
             aimer_dist = math.sqrt((self.initial_x - rect.centerx)**2 + (self.initial_y - rect.centery)**2)
 
-            reward = -5*(proj_dist/100)*(min(100/aimer_dist,1))
+            reward = -5*(proj_dist/100)*(max(100/aimer_dist,1))
 
             reward = max(reward,-5)
 
         '''if hit == True:
-            reward = 20
+            reward = 50
         else:
             reward = -5'''
 
@@ -495,13 +495,18 @@ class Boost(pygame.sprite.Sprite):
         self.life += 1
         if (player_rect.collidelistall([self.rect])):
             if (self.type == 0):
-                env.reward -= 10
+                env.reward -= 50
             if (self.type == 1):
                 if (env.P1.boosted == -1):
+                    env.reward -= 10
                     env.P1.move_speed = env.P1.move_speed*1.5
                     env.P1.boosted = 0
             self.kill()
         if (self.life == self.death*100):
+            if (self.type == 0):
+                env.reward += 50
+            if (self.type == 1):
+                env.reward += 10
             self.kill()
 
     def draw(self, surface):
