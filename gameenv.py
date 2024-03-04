@@ -140,10 +140,6 @@ class GameEnvironment(gym.Env):
                 self.P1.juke = -1
         elif action == 5:  # Nothing
             self.E1.update(self.enemy_theta, self.mode, action)
-
-        env.projectile_group.update(self.P1.rect, self.E1, self)
-        env.collectable_group.update(self.P1.rect, self)
-        env.obstacle_group.update()
         
         '''if self.reward > 300:
             done = True
@@ -153,14 +149,12 @@ class GameEnvironment(gym.Env):
             done = True
         else:
             done = False'''
-        
         if self.shots_taken >= 20:
             done = True
         else:
             done = False
 
         observation = self.get_state()
-
         return observation, self.step_reward, done, {}, {}
 
     def get_state(self):
@@ -196,6 +190,7 @@ class GameEnvironment(gym.Env):
         self.player_centery = SCREEN_HEIGHT - 100
         self.current_pos = self.start_pos
         self.reward = 0
+        self.self_reward = 0
         self.shots_taken = 0
 
         self.E1.reset()
@@ -386,8 +381,10 @@ if (sys.argv[2] == 'Train'):
 
             #action = env.action_space.sample()  # Random action selection
             state_next, reward, done, _, hi = env.step(action)
-            env.reward += env.self_reward
-            env.self_reward = 0
+            reward = env.step_reward
+            print(reward)
+            env.reward += reward
+            env.step_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
 
@@ -521,6 +518,10 @@ if (sys.argv[2] == 'Train'):
                 obstacle_spawn_time = random.randint(6,10)
                 obstacle_time = 0
 
+            env.projectile_group.update(env.P1.rect, env.E1, env)
+            env.collectable_group.update(env.P1.rect, env)
+            env.obstacle_group.update()
+
             env.P1.update(current_time, env.collectable_group)
             if (env.E1.auto == 1):
                 if (len(env.P1.path_history) > 1000):
@@ -573,8 +574,9 @@ if (sys.argv[2] == 'Test'):
             action = tf.argmax(action_probs[0]).numpy()
 
             state_next, reward, done, _, hi = env.step(action)
-            env.reward += env.self_reward
-            env.self_reward = 0
+            reward = env.step_reward
+            env.reward += reward
+            env.step_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
             state = state_next
@@ -635,6 +637,10 @@ if (sys.argv[2] == 'Test'):
                 env.spawn_obstacle = 1
                 obstacle_spawn_time = random.randint(6,10)
                 obstacle_time = 0
+
+            env.projectile_group.update(env.P1.rect, env.E1, env)
+            env.collectable_group.update(env.P1.rect, env)
+            env.obstacle_group.update()
 
             env.P1.update(current_time, env.collectable_group)
             if (env.E1.auto == 1):
