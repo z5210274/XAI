@@ -382,7 +382,6 @@ if (sys.argv[2] == 'Train'):
             #action = env.action_space.sample()  # Random action selection
             state_next, reward, done, _, hi = env.step(action)
             reward = env.step_reward
-            print(reward)
             env.reward += reward
             env.step_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
