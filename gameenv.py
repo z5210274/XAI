@@ -141,15 +141,9 @@ class GameEnvironment(gym.Env):
         elif action == 5:  # Nothing
             self.E1.update(self.enemy_theta, self.mode, action)
         
-        '''if self.reward > 300:
+        if env.reward > 400:
             done = True
-        elif self.reward < -300:
-            done = True
-        elif self.shots_taken >= 100:
-            done = True
-        else:
-            done = False'''
-        if self.shots_taken >= 20:
+        elif env.shots_taken >= 20:
             done = True
         else:
             done = False
@@ -189,9 +183,9 @@ class GameEnvironment(gym.Env):
         self.player_centerx = SCREEN_WIDTH/2
         self.player_centery = SCREEN_HEIGHT - 100
         self.current_pos = self.start_pos
-        self.reward = 0
-        self.self_reward = 0
-        self.shots_taken = 0
+        env.reward = 0
+        env.self_reward = 0
+        env.shots_taken = 0
 
         self.E1.reset()
         self.P1.reset_pos()
@@ -543,7 +537,7 @@ if (sys.argv[2] == 'Train'):
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
-        if running_reward > 200:  # Condition to consider the task solved
+        if running_reward > 300:  # Condition to consider the task solved
             print("Solved at episode {}!".format(episode_count))
             done = True
             break
