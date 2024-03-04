@@ -92,6 +92,7 @@ class GameEnvironment(gym.Env):
         self.current_pos = self.start_pos
         self.mode = 0
         self.reward = 0
+        self.step_reward = 0
         self.shots_taken = 0
         self.spawn_collectable = 1
         self.spawn_obstacle = 1
@@ -160,7 +161,7 @@ class GameEnvironment(gym.Env):
 
         observation = self.get_state()
 
-        return observation, self.reward, done, {}, {}
+        return observation, self.step_reward, done, {}, {}
 
     def get_state(self):
         arr = pygame.surfarray.array3d(
@@ -280,7 +281,7 @@ frame_count = 0
 # Number of frames to take random action and observe output
 epsilon_random_frames = 50000
 # Number of frames for exploration
-epsilon_greedy_frames = 1000000.0
+epsilon_greedy_frames = 100.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
@@ -385,6 +386,8 @@ if (sys.argv[2] == 'Train'):
 
             #action = env.action_space.sample()  # Random action selection
             state_next, reward, done, _, hi = env.step(action)
+            env.reward += env.self_reward
+            env.self_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
 
@@ -530,7 +533,7 @@ if (sys.argv[2] == 'Train'):
         
         # Update running reward to check condition for solving
         episode_reward_history.append(env.reward)
-        if len(episode_reward_history) > 100:
+        if len(episode_reward_history) > 50:
             del episode_reward_history[:1]
         running_reward = np.mean(episode_reward_history)
 
@@ -570,6 +573,8 @@ if (sys.argv[2] == 'Test'):
             action = tf.argmax(action_probs[0]).numpy()
 
             state_next, reward, done, _, hi = env.step(action)
+            env.reward += env.self_reward
+            env.self_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
             state = state_next

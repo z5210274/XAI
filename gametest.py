@@ -366,7 +366,7 @@ class Projectile(pygame.sprite.Sprite):
                     #"Blocked": 1,
                     "Hit": 0}
                 write_csv(data)
-                env.reward -= 10
+                env.step_reward -= 10
                 env.shots_taken += 1
                 env.E1.reloading = 0
                 self.kill()
@@ -397,7 +397,7 @@ class Projectile(pygame.sprite.Sprite):
 
             #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
-            env.reward += self.calculate_reward(True, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.step_reward += self.calculate_reward(True, rect, env.P1.path_history, self.initial_x, self.initial_y)
             env.shots_taken += 1
             env.E1.reloading = 0
             self.kill()
@@ -435,7 +435,7 @@ class Projectile(pygame.sprite.Sprite):
 
             #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
-            env.reward += self.calculate_reward(False, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.step_reward += self.calculate_reward(False, rect, env.P1.path_history, self.initial_x, self.initial_y)
             env.shots_taken += 1
             env.E1.reloading = 0
             self.kill()
@@ -495,18 +495,18 @@ class Boost(pygame.sprite.Sprite):
         self.life += 1
         if (player_rect.collidelistall([self.rect])):
             if (self.type == 0):
-                env.reward -= 50
+                env.step_reward -= 50
             if (self.type == 1):
                 if (env.P1.boosted == -1):
-                    env.reward -= 10
+                    env.step_reward -= 10
                     env.P1.move_speed = env.P1.move_speed*1.5
                     env.P1.boosted = 0
             self.kill()
         if (self.life == self.death*100):
             if (self.type == 0):
-                env.reward += 50
+                env.step_reward += 50
             if (self.type == 1):
-                env.reward += 10
+                env.step_reward += 10
             self.kill()
 
     def draw(self, surface):
