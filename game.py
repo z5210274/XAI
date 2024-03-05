@@ -19,7 +19,7 @@ obstacle_time = 0
 collectable_spawn_time = random.randint(2,5)
 obstacle_spawn_time = random.randint(7,10)
 
-filename = './human.csv'
+filename = './human_hist.csv'
 filename2 = './tcav.csv'
 FPS = 240
 FramePerSec = pygame.time.Clock()
@@ -49,10 +49,13 @@ check_file2 = os.path.isfile(filename2)
 print("tcav.csv exists: " + str(check_file2))
 
 def write_csv(new_data):
+    print("Hello")
     field_names = ["Shooter_x_pos","Shooter_y_pos",
                 "Projectile_x_pos","Projectile_y_pos",
                 "Player_x_pos_current","Player_y_pos_current",
                 "Player_x_pos_initial","Player_y_pos_initial",
+                "Distance_x","Distance_y",
+                "Displacement_x","Displacement_y",
                 "Theta",
                 #"Blocked",
                 "Hit"]
@@ -66,12 +69,40 @@ def write_csv2(new_data):
                 "Projectile_x_pos","Projectile_y_pos",
                 "Player_x_pos_current","Player_y_pos_current",
                 "Player_x_pos_initial","Player_y_pos_initial",
+                "Distance_x","Distance_y",
+                "Displacement_x","Displacement_y",
                 "Theta",
                 "Hit"]
     dict = new_data
     with open(filename2, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
         dict_object.writerow(dict)
+
+def calculate_distance(path_history):
+
+    if len(path_history) == 0:
+        return 0,0,0,0
+
+    if len(path_history) < 400:
+        displacement_x = path_history[len(path_history)-1][1]-path_history[0][1]
+        displacement_y = path_history[len(path_history)-1][2]-path_history[0][2]
+
+        distance_x = 0
+        distance_y = 0
+        for i in range(0,len(path_history)-1):
+            distance_x += abs(path_history[i+1][1]-path_history[i][1])  
+            distance_y += abs(path_history[i+1][2]-path_history[i][2])
+    else:
+        displacement_x = path_history[len(path_history)-1][1]-path_history[len(path_history)-400][1]
+        displacement_y = path_history[len(path_history)-1][2]-path_history[len(path_history)-400][2]
+
+        distance_x = 0
+        distance_y = 0
+        for i in range(len(path_history)-400,len(path_history)-1):
+            distance_x += abs(path_history[i+1][1]-path_history[i][1])  
+            distance_y += abs(path_history[i+1][2]-path_history[i][2])
+
+    return distance_x, distance_y, displacement_x, displacement_y
 
 #################################################################################################
 #################################################################################################
@@ -367,7 +398,7 @@ class Player(pygame.sprite.Sprite):
         self.x = self.rect.centerx
         self.y = self.rect.centery
 
-    def tcav_update(self,end_x,end_y,start_x,start_y, length):
+    def tcav_update(self,end_x,end_y,start_x,start_y, length): # Todo, implement movement 2s prior
         engine_mode = False
 
         line = [(start_x, start_y),(end_x, end_y)]
@@ -421,7 +452,7 @@ class Projectile(pygame.sprite.Sprite):
         self.rect.centerx = x
         self.rect.centery = y
 
-    def update(self, rect, enemy):
+    def update(self, rect, enemy, path_history):
         self.x += self.x_vel
         self.y += self.y_vel
 
@@ -430,6 +461,8 @@ class Projectile(pygame.sprite.Sprite):
 
         if (self.theta + 90 > 360):
             self.theta = self.theta - 360
+
+        distance_x, distance_y, displacement_x, displacement_y = calculate_distance(path_history)
 
         for block in obstacle_group:
             if (block.rect.collidelistall([self.rect])):
@@ -441,6 +474,10 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_y_pos_current": rect.centery,
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
+                    "Distance_x": distance_x,
+                    "Distance_y": distance_y,
+                    "Displacement_x": displacement_x,
+                    "Displacement_y": displacement_y,
                     "Theta": round(self.theta, 2),
                     #"Blocked": 1,
                     "Hit": 0}
@@ -457,6 +494,10 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_y_pos_current": rect.centery,
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
+                    "Distance_x": distance_x,
+                    "Distance_y": distance_y,
+                    "Displacement_x": displacement_x,
+                    "Displacement_y": displacement_y,
                     "Theta": round(self.theta, 2),
                     #"Blocked": 0,
                     "Hit": 1}
@@ -492,6 +533,10 @@ class Projectile(pygame.sprite.Sprite):
                     "Player_y_pos_current": rect.centery,
                     "Player_x_pos_initial": self.player_x,
                     "Player_y_pos_initial": self.player_y,
+                    "Distance_x": distance_x,
+                    "Distance_y": distance_y,
+                    "Displacement_x": displacement_x,
+                    "Displacement_y": displacement_y,
                     "Theta": round(self.theta, 2),
                     #"Blocked": 0,
                     "Hit": 0}
@@ -655,7 +700,11 @@ while True:
                     "Player_y_pos_current": coef[5],
                     "Player_x_pos_initial": coef[6],
                     "Player_y_pos_initial": coef[7],
-                    "Theta": coef[8],
+                    "Distance_x": coef[8],
+                    "Distance_y": coef[9],
+                    "Displacement_x": coef[10],
+                    "Displacement_y": coef[11],
+                    "Theta": coef[12],
                     "Hit": 0}
 
                     write_csv2(data)
@@ -686,22 +735,22 @@ while True:
 
         P1.update(current_time)
         E1.update(theta)
-        projectile_group.update(P1.rect, E1)
+        projectile_group.update(P1.rect, E1, P1.path_history)
         collectable_group.update(P1.rect, P1)
         obstacle_group.update()
-    if engine_mode == False:
+    if engine_mode == False: # Todo implement movement 2s prior
         aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
         line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
         pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
         if tcav_initialized == False:
-            E1.tcav_set(tcav[0],tcav[1],tcav[8])
-            bullet = E1.take_shot(tcav[6],tcav[7],[],tcav[8])
+            E1.tcav_set(tcav[0],tcav[1],tcav[12])
+            bullet = E1.take_shot(tcav[6],tcav[7],[],tcav[12])
             projectile_group.add(bullet)
             P1.tcav_set(tcav[6],tcav[7])
             tcav_initialized = True
         else:
             engine_mode = P1.tcav_update(tcav[4],tcav[5],tcav[6],tcav[7],len(projectile_group))
-            projectile_group.update(P1.rect, E1)
+            projectile_group.update(P1.rect, E1, P1.path_history)
 
     DISPLAYSURF.fill(WHITE)
     DISPLAYSURF.blit(text, textRect)

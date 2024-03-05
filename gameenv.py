@@ -42,6 +42,7 @@ obstacle_spawn_time = random.randint(7,10)
 
 filename = './episode.csv'
 filename2 = './target.csv'
+filename3 = './q_values.csv'
 FPS = 240
 
 # Screen information
@@ -59,8 +60,10 @@ WHITE = (255, 255, 255)
 
 check_file = os.path.isfile(filename)
 check_file2 = os.path.isfile(filename2)
+check_file3 = os.path.isfile(filename3)
 print("episode.csv exists: " + str(check_file))
 print("target.csv exists: " + str(check_file2))
+print("q_values.csv exists: " + str(check_file3))
 
 def write_csv(new_data):
     field_names = ['Episode', 'Reward', 'Time']
@@ -73,6 +76,13 @@ def write_csv2(new_data):
     field_names = ['Episode', 'Running_Reward', 'Frame_Count', 'Time']
     dict = new_data
     with open(filename2, 'a') as file:
+        dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
+        dict_object.writerow(dict)
+
+def write_csv3(new_data):
+    field_names = ['Move_right', 'Move_left', 'Aim_right', 'Aim_left', 'Shoot', 'Nothing']
+    dict = new_data
+    with open(filename3, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
         dict_object.writerow(dict)
 
@@ -563,6 +573,15 @@ if (sys.argv[2] == 'Test'):
             state_tensor = tf.convert_to_tensor(state)
             state_tensor = tf.expand_dims(state_tensor, 0)
             action_probs = model(state_tensor, training=False)
+
+            data = {"Move_right": action_probs[0][0].numpy(), 
+                    "Move_left": action_probs[0][1].numpy(),
+                    "Aim_right": action_probs[0][2].numpy(),
+                    "Aim_left": action_probs[0][3].numpy(), 
+                    "Shoot": action_probs[0][4].numpy(),
+                    "Nothing": action_probs[0][5].numpy()}
+            write_csv3(data)
+
             # Take best action
             action = tf.argmax(action_probs[0]).numpy()
 

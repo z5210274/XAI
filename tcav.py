@@ -10,10 +10,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 def run_tcav():
-    filename = './human.csv'
-    filename_social = './human_social.csv'
-    filename_cultural = './human_cultural.csv'
-    filename_neuro = './human_neuro.csv'
+    filename = './human_hist.csv'
+    filename_social = './human_socialhist.csv'
+    filename_cultural = './human_culturalhist.csv'
+    filename_neuro = './human_neurohist.csv'
 
     check_file = os.path.isfile(filename)
     print("human.csv exists: " + str(check_file))
@@ -26,6 +26,7 @@ def run_tcav():
 
     field_names = ['Shooter_x_pos', 'Shooter_y_pos', 'Projectile_x_pos', 'Projectile_y_pos', 
                     'Player_x_pos_current', 'Player_y_pos_current', 'Player_x_pos_initial', 'Player_y_pos_initial', 
+                    'Distance_x', 'Distance_y', 'Displacement_x', 'Displacement_y',
                     'Theta', 'Hit']
 
     df_base = pd.read_csv(filename)
@@ -117,7 +118,7 @@ def run_tcav():
 
     concept_coef = concept_logmodel.coef_[0]
     concept_coef = np.resize(concept_coef, concept_coef.size - 1)
-    concept_hitweight = concept_logmodel.coef_[0][9]
+    concept_hitweight = concept_logmodel.coef_[0][13]
     concept_bias = concept_logmodel.intercept_
 
     df_socialpos = df_social.loc[df_social['Hit'] == 1]
