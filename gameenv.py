@@ -19,7 +19,7 @@ from collections import deque # Ordered collection with ends
 ###
 import pygame, sys
 import math
-import os.path
+import os
 import csv
 import random
 
@@ -132,6 +132,7 @@ class GameEnvironment(gym.Env):
 
     def step(self, action):
         done = False
+        reward = 0
         if action == 0:  # Right
             self.E1.update(self.enemy_theta, self.mode, action)
         elif action == 1:  # Left
@@ -144,22 +145,29 @@ class GameEnvironment(gym.Env):
             self.E1.update(self.enemy_theta, self.mode, action)
         elif action == 3:  # Aim left
             self.E1.update(self.enemy_theta, self.mode, action)
-        elif action == 4:  # Shoot
+        elif action == 4:  # Shoot 13 frames per shot
             self.E1.update(self.enemy_theta, self.mode, action)
-            if self.E1.reloading == 0:
+            if self.E1.reloading == 0 and env.mode == 0:
                 self.P1.juke = -1
+                bullet = self.E1.take_shot(self.P1.rect.centerx, self.P1.rect.centery, self.P1.path_history, theta)
+                self.projectile_group.add(bullet)
+                self.E1.reloading = 1
+                self.P1.juke = -1
+            else: 
+                reward = -1
         elif action == 5:  # Nothing
             self.E1.update(self.enemy_theta, self.mode, action)
         
-        if env.reward > 400:
+        if env.reward > 200:
             done = True
         elif env.shots_taken >= 20:
             done = True
+            reward = -25
         else:
             done = False
-
+            
         observation = self.get_state()
-        return observation, self.step_reward, done, {}, {}
+        return observation, reward, done, {}, {}
 
     def get_state(self):
         arr = pygame.surfarray.array3d(
@@ -280,7 +288,7 @@ frame_count = 0
 # Number of frames to take random action and observe output
 epsilon_random_frames = 50000
 # Number of frames for exploration
-epsilon_greedy_frames = 100.0
+epsilon_greedy_frames = 1000000.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
@@ -385,7 +393,7 @@ if (sys.argv[2] == 'Train'):
 
             #action = env.action_space.sample()  # Random action selection
             state_next, reward, done, _, hi = env.step(action)
-            reward = env.step_reward
+            reward += env.step_reward
             env.reward += reward
             env.step_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
@@ -464,13 +472,6 @@ if (sys.argv[2] == 'Train'):
             if done:
                 break
 
-            if (action == 4 and env.mode == 0):
-                if (env.E1.reloading == 0):
-                    bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
-                    env.projectile_group.add(bullet)
-                    env.E1.reloading = 1
-                    env.P1.juke = -1
-
             for event in pygame.event.get():              
                 if event.type == QUIT:
                     pygame.quit()
@@ -504,10 +505,13 @@ if (sys.argv[2] == 'Train'):
             if (env.spawn_collectable == 1):
                 collectable_time += 1
             if (env.spawn_collectable == 0):
-                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
+                spawn_locations = [[SCREEN_WIDTH/2,SCREEN_HEIGHT-25],[SCREEN_WIDTH-25,(SCREEN_HEIGHT/4)*3],[SCREEN_WIDTH/2,SCREEN_HEIGHT/2+25],[25,(SCREEN_HEIGHT/4)*3]]
+                random_location = random.randint(0,3)
+                orb = Boost(spawn_locations[random_location][0],spawn_locations[random_location][1],random.randint(0,1), 3)
+                #orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
                 env.collectable_group.add(orb)
                 env.spawn_collectable = 1
-                collectable_spawn_time = random.randint(6,10)
+                collectable_spawn_time = random.randint(3,6)
                 collectable_time = 0
 
             if (obstacle_time == obstacle_spawn_time*100):
@@ -515,10 +519,10 @@ if (sys.argv[2] == 'Train'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,8))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
-                obstacle_spawn_time = random.randint(6,10)
+                obstacle_spawn_time = random.randint(3,7)
                 obstacle_time = 0
 
             env.projectile_group.update(env.P1.rect, env.E1, env)
@@ -633,10 +637,13 @@ if (sys.argv[2] == 'Test'):
             if (env.spawn_collectable == 1):
                 collectable_time += 1
             if (env.spawn_collectable == 0):
-                orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
+                spawn_locations = [[SCREEN_WIDTH/2,SCREEN_HEIGHT-25],[SCREEN_WIDTH-25,(SCREEN_HEIGHT/4)*3],[SCREEN_WIDTH/2,SCREEN_HEIGHT/2+25],[25,(SCREEN_HEIGHT/4)*3]]
+                random_location = random.randint(0,3)
+                orb = Boost(spawn_locations[random_location][0],spawn_locations[random_location][1],random.randint(0,1), 3)
+                #orb = Boost(random.randint(0,SCREEN_WIDTH),random.randint(SCREEN_HEIGHT/2,SCREEN_HEIGHT),random.randint(0,1), random.randint(3,7))
                 env.collectable_group.add(orb)
                 env.spawn_collectable = 1
-                collectable_spawn_time = random.randint(6,10)
+                collectable_spawn_time = random.randint(3,6)
                 collectable_time = 0
 
             if (obstacle_time == obstacle_spawn_time*100):
@@ -644,10 +651,10 @@ if (sys.argv[2] == 'Test'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,8))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
-                obstacle_spawn_time = random.randint(6,10)
+                obstacle_spawn_time = random.randint(3,7)
                 obstacle_time = 0
 
             env.projectile_group.update(env.P1.rect, env.E1, env)
