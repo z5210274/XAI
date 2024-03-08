@@ -104,6 +104,7 @@ class GameEnvironment(gym.Env):
         self.reward = 0
         self.step_reward = 0
         self.shots_taken = 0
+        self.shots_hit = 0
         self.spawn_collectable = 1
         self.spawn_obstacle = 1
 
@@ -149,10 +150,6 @@ class GameEnvironment(gym.Env):
             self.E1.update(self.enemy_theta, self.mode, action)
             if self.E1.reloading == 0 and env.mode == 0:
                 self.P1.juke = -1
-                bullet = self.E1.take_shot(self.P1.rect.centerx, self.P1.rect.centery, self.P1.path_history, theta)
-                self.projectile_group.add(bullet)
-                self.E1.reloading = 1
-                self.P1.juke = -1
             else: 
                 reward = -1
         elif action == 5:  # Nothing
@@ -160,9 +157,15 @@ class GameEnvironment(gym.Env):
         
         if env.reward > 200:
             done = True
+        elif env.reward < -200:
+            done = True
+            reward = -50
         elif env.shots_taken >= 20:
             done = True
             reward = -25
+        elif env.shots_hit >= 5:
+            done = True
+            reward = 50
         else:
             done = False
             
@@ -204,6 +207,7 @@ class GameEnvironment(gym.Env):
         env.reward = 0
         env.self_reward = 0
         env.shots_taken = 0
+        env.shots_hit = 0
 
         self.E1.reset()
         self.P1.reset_pos()
@@ -471,6 +475,13 @@ if (sys.argv[2] == 'Train'):
 
             if done:
                 break
+
+            if (action == 4 and env.mode == 0):
+                if (env.E1.reloading == 0):
+                    bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
+                    env.projectile_group.add(bullet)
+                    env.E1.reloading = 1
+                    env.P1.juke = -1
 
             for event in pygame.event.get():              
                 if event.type == QUIT:

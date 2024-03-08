@@ -399,6 +399,7 @@ class Projectile(pygame.sprite.Sprite):
             write_csv(data)
             env.step_reward += self.calculate_reward(True, rect, env.P1.path_history, self.initial_x, self.initial_y)
             env.shots_taken += 1
+            env.shots_hit += 1
             env.E1.reloading = 0
             self.kill()
 
