@@ -77,6 +77,7 @@ class Enemy(pygame.sprite.Sprite):
         self.x = self.rect.centerx 
         self.y = self.rect.centery
         self.theta = 90
+        self.reloading = 0
  
     def update(self, theta, mode, action):
         if mode == 1:

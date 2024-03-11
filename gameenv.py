@@ -132,8 +132,19 @@ class GameEnvironment(gym.Env):
         pygame.display.set_caption("Game")
 
     def step(self, action):
+
         done = False
         reward = 0
+
+        original_dist = abs(self.P1.rect.centerx - self.E1.rect.centerx)
+
+        real_line = [(self.E1.rect.centerx, self.E1.rect.centery),(self.P1.rect.centerx, self.P1.rect.centery)]
+        real_theta = getAngle(real_line[1],real_line[0])
+        if (real_theta > 360):
+                real_theta = real_theta - 360
+        original_theta_diff = abs(self.enemy_theta-real_theta)
+        original_theta_diff = min(original_theta_diff, 360-original_theta_diff)
+
         if action == 0:  # Right
             self.E1.update(self.enemy_theta, self.mode, action)
         elif action == 1:  # Left
@@ -148,12 +159,27 @@ class GameEnvironment(gym.Env):
             self.E1.update(self.enemy_theta, self.mode, action)
         elif action == 4:  # Shoot 13 frames per shot
             self.E1.update(self.enemy_theta, self.mode, action)
-            if self.E1.reloading == 0 and env.mode == 0:
+            if self.E1.reloading == 0:
                 self.P1.juke = -1
             else: 
                 reward = -1
         elif action == 5:  # Nothing
             self.E1.update(self.enemy_theta, self.mode, action)
+
+        new_dist = abs(self.P1.rect.centerx - self.E1.rect.centerx)
+
+        new_theta_diff = abs(self.enemy_theta-real_theta)
+        new_theta_diff = min(new_theta_diff, 360-new_theta_diff)
+
+        if (new_dist < original_dist):
+            reward = 1
+        elif (new_dist > original_dist):
+            reward = -1
+
+        if (new_theta_diff < original_theta_diff):
+            reward = 1
+        elif (new_theta_diff > original_theta_diff):
+            reward = -1
         
         if env.reward > 200:
             done = True
@@ -163,7 +189,7 @@ class GameEnvironment(gym.Env):
         elif env.shots_taken >= 20:
             done = True
             reward = -25
-        elif env.shots_hit >= 5:
+        elif env.shots_hit >= 6:
             done = True
             reward = 50
         else:
@@ -530,7 +556,7 @@ if (sys.argv[2] == 'Train'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),SCREEN_HEIGHT/2, random.randint(2,5))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
                 obstacle_spawn_time = random.randint(3,7)
@@ -662,7 +688,7 @@ if (sys.argv[2] == 'Test'):
             if (env.spawn_obstacle == 1):
                 obstacle_time += 1
             if (env.spawn_obstacle == 0):
-                block = Obstacle(random.randint(0,SCREEN_WIDTH),random.randint(int(SCREEN_HEIGHT/4),SCREEN_HEIGHT/2), random.randint(2,5))
+                block = Obstacle(random.randint(0,SCREEN_WIDTH),SCREEN_HEIGHT/2, random.randint(2,5))
                 env.obstacle_group.add(block)
                 env.spawn_obstacle = 1
                 obstacle_spawn_time = random.randint(3,7)
