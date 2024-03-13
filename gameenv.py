@@ -645,6 +645,8 @@ if (sys.argv[2] == 'Test'):
             state_next, reward, done, _, hi = env.step(action)
             reward = env.step_reward
             env.reward += reward
+            env.reward += env.delayed_reward
+            env.delayed_reward = 0
             env.step_reward = 0
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
