@@ -431,6 +431,7 @@ if (sys.argv[2] == 'Train'):
 
             if (env.delayed == True):
                 rewards_history[env.shoot_index-1] += env.delayed_reward
+                env.reward += env.delayed_reward
                 env.delayed_reward = 0
                 env.delayed = False
 
