@@ -66,7 +66,7 @@ print("target.csv exists: " + str(check_file2))
 print("q_values.csv exists: " + str(check_file3))
 
 def write_csv(new_data):
-    field_names = ['Episode', 'Reward', 'Time']
+    field_names = ['Episode', 'Reward', 'Time', 'Hits']
     dict = new_data
     with open(filename, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
@@ -107,6 +107,9 @@ class GameEnvironment(gym.Env):
         self.shots_hit = 0
         self.spawn_collectable = 1
         self.spawn_obstacle = 1
+        self.shoot_index = 0
+        self.delayed_reward = 0
+        self.delayed = False
 
         self.P1 = Player()
         self.E1 = Enemy()
@@ -132,7 +135,6 @@ class GameEnvironment(gym.Env):
         pygame.display.set_caption("Game")
 
     def step(self, action):
-
         done = False
         reward = 0
 
@@ -426,16 +428,27 @@ if (sys.argv[2] == 'Train'):
             reward += env.step_reward
             env.reward += reward
             env.step_reward = 0
+
+            if (env.delayed == True):
+                rewards_history[env.shoot_index-1] += env.delayed_reward
+                env.delayed_reward = 0
+                env.delayed = False
+
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
 
             # Save actions and states in replay buffer
             action_history.append(action)
+            if (action == 4 and env.E1.reloading == 0):
+                env.shoot_index = len(action_history)
             state_history.append(state)
             state_next_history.append(state_next)
             done_history.append(done)
             rewards_history.append(reward)
             state = state_next
+            '''if (action == 4 and env.E1.reloading == 0):
+                print(action_history)
+                print(rewards_history)'''
 
             # Update every fourth frame and once batch size is over 32
             if frame_count % update_after_actions == 0 and len(done_history) > batch_size:
@@ -498,6 +511,8 @@ if (sys.argv[2] == 'Train'):
                 del state_next_history[:1]
                 del action_history[:1]
                 del done_history[:1]
+
+                env.shoot_index += -1
 
             if done:
                 break
@@ -584,7 +599,7 @@ if (sys.argv[2] == 'Train'):
 
         episode_count += 1
         now = datetime.datetime.now()
-        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time()} 
+        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time(), "Hits": env.shots_hit} 
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 

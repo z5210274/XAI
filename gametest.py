@@ -122,12 +122,12 @@ class Enemy(pygame.sprite.Sprite):
                 self.update_player_mode()
 
         if mode == 0:
-            if self.rect.left > 0:
-                if action == 0:
-                    self.rect.move_ip(-self.move_speed, 0)
             if self.rect.right < SCREEN_WIDTH:        
-                if action == 1:
+                if action == 0:
                     self.rect.move_ip(self.move_speed, 0)
+            if self.rect.left > 0:
+                if action == 1:
+                    self.rect.move_ip(-self.move_speed, 0)
             '''if self.rect.top > 0:
                 if action == 2:
                     self.rect.move_ip(0, self.move_speed)
@@ -367,9 +367,11 @@ class Projectile(pygame.sprite.Sprite):
                     #"Blocked": 1,
                     "Hit": 0}
                 write_csv(data)
-                env.step_reward -= 10
+                env.delayed_reward -= 10
+                env.delayed = True
                 env.shots_taken += 1
                 env.E1.reloading = 0
+                env.shot_done = 1
                 self.kill()
 
         if (rect.collidelistall([self.rect])):
@@ -398,10 +400,12 @@ class Projectile(pygame.sprite.Sprite):
 
             #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
-            env.step_reward += self.calculate_reward(True, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.delayed_reward += self.calculate_reward(True, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.delayed = True
             env.shots_taken += 1
             env.shots_hit += 1
             env.E1.reloading = 0
+            env.shot_done = 1
             self.kill()
 
         if (self.rect.top > rect.bottom and self.miss_x == -1 and self.miss_y == -1):
@@ -437,9 +441,11 @@ class Projectile(pygame.sprite.Sprite):
 
             #print(enemy.neuro, enemy.social, enemy.cultural)
             write_csv(data)
-            env.step_reward += self.calculate_reward(False, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.delayed_reward += self.calculate_reward(False, rect, env.P1.path_history, self.initial_x, self.initial_y)
+            env.delayed = True
             env.shots_taken += 1
             env.E1.reloading = 0
+            env.shot_done = 1
             self.kill()
         return
 
