@@ -187,11 +187,10 @@ class GameEnvironment(gym.Env):
             done = True
         elif env.reward < -200:
             done = True
-            reward = -50
         elif env.shots_taken >= 20:
             done = True
             reward = -25
-        elif env.shots_hit >= 6:
+        elif env.shots_hit >= 10:
             done = True
             reward = 50
         else:
