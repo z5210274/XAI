@@ -40,7 +40,10 @@ obstacle_time = 0
 collectable_spawn_time = random.randint(2,5)
 obstacle_spawn_time = random.randint(7,10)
 
-filename = './episode.csv'
+if (sys.argv[2] == 'Train'):
+    filename = './episode.csv'
+if (sys.argv[2] == 'Test'):
+    filename = './episode_test.csv'
 filename2 = './target.csv'
 filename3 = './q_values.csv'
 FPS = 240
@@ -66,7 +69,7 @@ print("target.csv exists: " + str(check_file2))
 print("q_values.csv exists: " + str(check_file3))
 
 def write_csv(new_data):
-    field_names = ['Episode', 'Reward', 'Time', 'Hits']
+    field_names = ['Episode', 'Reward', 'Time', 'Hits', 'Avg_pos', 'Avg_theta', 'Shots']
     dict = new_data
     with open(filename, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
@@ -110,6 +113,9 @@ class GameEnvironment(gym.Env):
         self.shoot_index = 0
         self.delayed_reward = 0
         self.delayed = False
+        self.pos_distances = []
+        self.theta_distances = []
+
 
         self.P1 = Player()
         self.E1 = Enemy()
@@ -147,6 +153,9 @@ class GameEnvironment(gym.Env):
         original_theta_diff = abs(self.enemy_theta-real_theta)
         original_theta_diff = min(original_theta_diff, 360-original_theta_diff)
 
+        self.pos_distances.append(original_dist)
+        self.theta_distances.append(original_theta_diff)
+
         if action == 0:  # Right
             self.E1.update(self.enemy_theta, self.mode, action)
         elif action == 1:  # Left
@@ -183,9 +192,9 @@ class GameEnvironment(gym.Env):
         elif (new_theta_diff > original_theta_diff):
             reward = -1
         
-        if env.reward > 200:
+        if env.reward > 500:
             done = True
-        elif env.reward < -200:
+        elif env.reward < -500:
             done = True
         elif env.shots_taken >= 20:
             done = True
@@ -235,6 +244,8 @@ class GameEnvironment(gym.Env):
         env.self_reward = 0
         env.shots_taken = 0
         env.shots_hit = 0
+        self.pos_distances.clear()
+        self.theta_distances.clear()
 
         self.E1.reset()
         self.P1.reset_pos()
@@ -599,7 +610,9 @@ if (sys.argv[2] == 'Train'):
 
         episode_count += 1
         now = datetime.datetime.now()
-        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time(), "Hits": env.shots_hit} 
+        avg_pos_distance = sum(env.pos_distances)/len(env.pos_distances)
+        avg_theta_distance = sum(env.theta_distances)/len(env.theta_distances)
+        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time(), "Hits": env.shots_hit, "Avg_pos": avg_pos_distance, "Avg_theta": avg_theta_distance, "Shots": env.shots_taken} 
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
@@ -650,6 +663,9 @@ if (sys.argv[2] == 'Test'):
             state_next, stacked_frames = stack_frames(stacked_frames, state_next, False)
             state_next = np.array(state_next)
             state = state_next
+
+            if done:
+                break
 
             if (action == 4 and env.mode == 0):
                 if (env.E1.reloading == 0):
@@ -725,6 +741,8 @@ if (sys.argv[2] == 'Test'):
 
         episode_count += 1
         now = datetime.datetime.now()
-        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time()} 
+        avg_pos_distance = sum(env.pos_distances)/len(env.pos_distances)
+        avg_theta_distance = sum(env.theta_distances)/len(env.theta_distances)
+        data = {"Episode": episode_count, "Reward": env.reward, "Time": now.time(), "Hits": env.shots_hit, "Avg_pos": avg_pos_distance, "Avg_theta": avg_theta_distance, "Shots": env.shots_taken}
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
