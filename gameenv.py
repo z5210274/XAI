@@ -183,14 +183,19 @@ class GameEnvironment(gym.Env):
         new_theta_diff = min(new_theta_diff, 360-new_theta_diff)
 
         if (new_dist < original_dist):
-            reward = 1
+            reward += 1
         elif (new_dist > original_dist):
-            reward = -1
+            reward += -1
 
         if (new_theta_diff < original_theta_diff):
-            reward = 1
+            reward += 1
         elif (new_theta_diff > original_theta_diff):
-            reward = -1
+            reward += -1
+
+        if (abs(new_theta_diff) >= 10):
+            reward += -1
+        else:
+            reward += 1
         
         if env.reward > 500:
             done = True
@@ -198,10 +203,10 @@ class GameEnvironment(gym.Env):
             done = True
         elif env.shots_taken >= 20:
             done = True
-            reward = -25
+            reward += -25
         elif env.shots_hit >= 10:
             done = True
-            reward = 50
+            reward += 50
         else:
             done = False
             
