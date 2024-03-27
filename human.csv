@@ -1,4 +1,4 @@
-Shooter_x_pos,Shooter_y_pos,Projectile_x_pos,Projectile_y_pos,Player_x_pos_current,Player_y_pos_current,Player_x_pos_initial,Player_y_pos_initial,Theta,Hit
+Shooter_x_pos,Shooter_y_pos,Projectile_x_pos,Projectile_y_pos,Player_x_pos_current,Player_y_pos_current,Player_x_pos_initial,Player_y_pos_initial,Distance_x,Distance_y,Displacement_x,Displacement_y,Theta,Hit
 180,80,1,267,124,291,53,271,133.51,0
 180,80,118,280,130,293,72,276,106.9,1
 180,80,118,280,134,294,76,277,106.9,1

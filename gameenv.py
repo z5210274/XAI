@@ -171,7 +171,8 @@ class GameEnvironment(gym.Env):
         elif action == 4:  # Shoot 13 frames per shot
             self.E1.update(self.enemy_theta, self.mode, action)
             if self.E1.reloading == 0:
-                self.P1.juke = -1
+                if (original_theta_diff < 10):
+                    self.P1.juke = -1
             else: 
                 reward = -1
         elif action == 5:  # Nothing
@@ -415,6 +416,10 @@ if (sys.argv[2] == 'Train'):
         for timestep in range (1,max_steps_per_episode):
             aim_x, aim_y = env.E1.aim_calc(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history)
             line = [(env.E1.rect.centerx, env.E1.rect.centery),(aim_x, aim_y)]
+            real_line = [(env.E1.rect.centerx, env.E1.rect.centery),(env.P1.rect.centerx, env.P1.rect.centery)]
+            real_theta = getAngle(real_line[1],real_line[0])
+            original_theta_diff = abs(env.enemy_theta-real_theta)
+            original_theta_diff = min(original_theta_diff, 360-original_theta_diff)
             theta = getAngle(line[1], line[0])
             if (theta > 360):
                 theta = theta - 360
@@ -538,7 +543,8 @@ if (sys.argv[2] == 'Train'):
                     bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
                     env.projectile_group.add(bullet)
                     env.E1.reloading = 1
-                    env.P1.juke = -1
+                    if (original_theta_diff < 10):
+                        env.P1.juke = -1
 
             for event in pygame.event.get():              
                 if event.type == QUIT:
@@ -550,7 +556,8 @@ if (sys.argv[2] == 'Train'):
                             bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
                             env.projectile_group.add(bullet)
                             env.E1.reloading = 1
-                            env.P1.juke = -1
+                            if (original_theta_diff < 10):
+                                env.P1.juke = -1
                     if event.key == pygame.K_r: # Clear projectile cache
                         env.projectile_group.empty()
                     if event.key == pygame.K_p:
@@ -621,10 +628,11 @@ if (sys.argv[2] == 'Train'):
         write_csv(data)
         print("We are now entering Episode: " + str(episode_count) + ", Last episode reward: " + str(env.reward))
 
-        if running_reward > 300:  # Condition to consider the task solved
-            print("Solved at episode {}!".format(episode_count))
-            done = True
-            break
+        if episode_count >= 50:
+            if running_reward > 300:  # Condition to consider the task solved
+                print("Solved at episode {}!".format(episode_count))
+                model_target.save('./model.keras')
+                exit(1)
 
 ############### Test #############################
 if (sys.argv[2] == 'Test'):
@@ -636,6 +644,10 @@ if (sys.argv[2] == 'Test'):
         for timestep in range (1,max_steps_per_episode):
             aim_x, aim_y = env.E1.aim_calc(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history)
             line = [(env.E1.rect.centerx, env.E1.rect.centery),(aim_x, aim_y)]
+            real_line = [(env.E1.rect.centerx, env.E1.rect.centery),(env.P1.rect.centerx, env.P1.rect.centery)]
+            real_theta = getAngle(real_line[1],real_line[0])
+            original_theta_diff = abs(env.enemy_theta-real_theta)
+            original_theta_diff = min(original_theta_diff, 360-original_theta_diff)
             theta = getAngle(line[1], line[0])
             if (theta > 360):
                 theta = theta - 360
@@ -677,7 +689,8 @@ if (sys.argv[2] == 'Test'):
                     bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
                     env.projectile_group.add(bullet)
                     env.E1.reloading = 1
-                    env.P1.juke = -1
+                    if (original_theta_diff < 10):
+                        env.P1.juke = -1
 
             for event in pygame.event.get():              
                 if event.type == QUIT:
@@ -689,7 +702,8 @@ if (sys.argv[2] == 'Test'):
                             bullet = env.E1.take_shot(env.P1.rect.centerx, env.P1.rect.centery, env.P1.path_history, theta)
                             env.projectile_group.add(bullet)
                             env.E1.reloading = 1
-                            env.P1.juke = -1
+                            if (original_theta_diff < 10):
+                                env.P1.juke = -1
                     if event.key == pygame.K_r: # Clear projectile cache
                         env.projectile_group.empty()
                     if event.key == pygame.K_p:

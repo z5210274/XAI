@@ -11,9 +11,9 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 
 def run_tcav():
     filename = './human_hist.csv'
-    filename_social = './human_socialhist.csv'
-    filename_cultural = './human_culturalhist.csv'
-    filename_neuro = './human_neurohist.csv'
+    filename_social = './human_social.csv'
+    filename_cultural = './human_cultural.csv'
+    filename_neuro = './human_neuro.csv'
 
     check_file = os.path.isfile(filename)
     print("human.csv exists: " + str(check_file))

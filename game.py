@@ -49,7 +49,6 @@ check_file2 = os.path.isfile(filename2)
 print("tcav.csv exists: " + str(check_file2))
 
 def write_csv(new_data):
-    print("Hello")
     field_names = ["Shooter_x_pos","Shooter_y_pos",
                 "Projectile_x_pos","Projectile_y_pos",
                 "Player_x_pos_current","Player_y_pos_current",
