@@ -49,7 +49,7 @@ def run_tcav():
     base_logmodel.fit(x_basetrain,y_basetrain)
 
     prediction = base_logmodel.predict(x_basetest)
-
+    print("Base model classification")
     print(classification_report(y_basetest,prediction))
     print(accuracy_score(y_basetest,prediction))
     #print(confusion_matrix(y_basetest,prediction))
@@ -67,7 +67,7 @@ def run_tcav():
     social_logmodel.fit(x_socialtrain,y_socialtrain)
 
     prediction = social_logmodel.predict(x_socialtest)
-
+    print("Social model classification")
     print(classification_report(y_socialtest,prediction))
     print(accuracy_score(y_socialtest,prediction))
     #print(confusion_matrix(y_socialtest,prediction))
@@ -102,6 +102,7 @@ def run_tcav():
     x_cculturaldata = x_ccultural.to_numpy()
     y_cculturaldata = y_ccultural.to_numpy()
 
+    # Choose which concept we want to train here
     x_total = np.append(x_cbasedata,x_csocialdata, axis=0)
     y_total = np.append(y_cbasedata,y_csocialdata, axis=0)
 
@@ -112,6 +113,7 @@ def run_tcav():
 
     concept_prediction = concept_logmodel.predict(x_concepttest)
 
+    print("Classification of Social model against base data")
     print(classification_report(y_concepttest,concept_prediction))
     print(accuracy_score(y_concepttest,concept_prediction))
     print(confusion_matrix(y_concepttest,concept_prediction))

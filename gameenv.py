@@ -46,6 +46,7 @@ if (sys.argv[2] == 'Test'):
     filename = './episode_test.csv'
 filename2 = './target.csv'
 filename3 = './q_values.csv'
+filename4 = './state.csv'
 FPS = 240
 
 # Screen information
@@ -64,9 +65,11 @@ WHITE = (255, 255, 255)
 check_file = os.path.isfile(filename)
 check_file2 = os.path.isfile(filename2)
 check_file3 = os.path.isfile(filename3)
+check_file4 = os.path.isfile(filename4)
 print("episode.csv exists: " + str(check_file))
 print("target.csv exists: " + str(check_file2))
 print("q_values.csv exists: " + str(check_file3))
+print("state.csv exists: " + str(check_file4))
 
 def write_csv(new_data):
     field_names = ['Episode', 'Reward', 'Time', 'Hits', 'Avg_pos', 'Avg_theta', 'Shots']
@@ -86,6 +89,13 @@ def write_csv3(new_data):
     field_names = ['Move_right', 'Move_left', 'Aim_right', 'Aim_left', 'Shoot', 'Nothing']
     dict = new_data
     with open(filename3, 'a') as file:
+        dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
+        dict_object.writerow(dict)
+
+def write_csv4(new_data):
+    field_names = ['Player_x','Player_y','Aimer_x','Aimer_y','Theta']
+    dict = new_data
+    with open(filename4, 'a') as file:
         dict_object = csv.DictWriter(file, fieldnames=field_names, lineterminator = '\n') 
         dict_object.writerow(dict)
 
@@ -667,6 +677,12 @@ if (sys.argv[2] == 'Test'):
                     "Shoot": action_probs[0][4].numpy(),
                     "Nothing": action_probs[0][5].numpy()}
             write_csv3(data)
+            data2 = {"Player_x": env.P1.rect.centerx, 
+                    "Player_y": env.P1.rect.centery,
+                    "Aimer_x": env.E1.rect.centerx,
+                    "Aimer_y": env.E1.rect.centery, 
+                    "Theta": env.P1.theta}
+            write_csv4(data2)
 
             # Take best action
             action = tf.argmax(action_probs[0]).numpy()

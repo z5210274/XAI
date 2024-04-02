@@ -397,26 +397,35 @@ class Player(pygame.sprite.Sprite):
         self.x = self.rect.centerx
         self.y = self.rect.centery
 
-    def tcav_update(self,end_x,end_y,start_x,start_y, length): # Todo, implement movement 2s prior
-        engine_mode = False
+    def tcav_update(self,end_x,end_y,start_x,start_y, length, tcav_pred, tcav_pred_vector, tcav_pred_count):
+        if (tcav_pred == True): # Todo: Map disp/dist to see how many oscillations of movement then construct path
+            # Vector size 400, mapping backwards from start_x/y the position of target until 2s prior making sure gradients = dist
+            engine_mode = False 
+            self.x = tcav_pred_vector[len(tcav_pred_vector)-tcav_pred_count][0]
+            self.y = tcav_pred_vector[len(tcav_pred_vector)-tcav_pred_count][1]
 
-        line = [(start_x, start_y),(end_x, end_y)]
-        theta = getAngle(line[1], line[0])
+            self.rect.centerx = int(self.x)
+            self.rect.centery = int(self.y)
+        elif (tcav_pred == False):
+            engine_mode = False
 
-        if (theta > 360):
-            theta = theta - 360
+            line = [(start_x, start_y),(end_x, end_y)]
+            theta = getAngle(line[1], line[0])
 
-        x_vel = math.cos(theta * (2*math.pi/360)) * self.move_speed
-        y_vel = math.sin(theta * (2*math.pi/360)) * self.move_speed
-        
-        self.x += x_vel
-        self.y += y_vel
+            if (theta > 360):
+                theta = theta - 360
 
-        self.rect.centerx = int(self.x)
-        self.rect.centery = int(self.y)
+            x_vel = math.cos(theta * (2*math.pi/360)) * self.move_speed
+            y_vel = math.sin(theta * (2*math.pi/360)) * self.move_speed
+            
+            self.x += x_vel
+            self.y += y_vel
 
-        if (length == 0):
-            engine_mode = True
+            self.rect.centerx = int(self.x)
+            self.rect.centery = int(self.y)
+
+            if (length == 0):
+                engine_mode = True
 
         return engine_mode
  
@@ -641,6 +650,9 @@ spawn_obstacle = 1
 
 engine_mode = True
 tcav_initialized = False
+tcav_pred = False
+tcav_pred_count = 0
+tcav_pred_vector = []
 tcav = []
 coef = []
  
@@ -690,6 +702,7 @@ while True:
                 if event.key == pygame.K_x: # Reset
                     engine_mode = False
                     tcav_initialized = False
+                    tcav_pred = True
                 if event.key == pygame.K_z: # Save TCAV
                     data = {"Shooter_x_pos": coef[0], 
                     "Shooter_y_pos": coef[1],
@@ -737,19 +750,70 @@ while True:
         projectile_group.update(P1.rect, E1, P1.path_history)
         collectable_group.update(P1.rect, P1)
         obstacle_group.update()
-    if engine_mode == False: # Todo implement movement 2s prior
+    if engine_mode == False:
         aim_x, aim_y = E1.aim_calc(P1.rect.centerx, P1.rect.centery, P1.path_history)
         line = [(E1.rect.centerx, E1.rect.centery),(aim_x, aim_y)]
         pygame.draw.line(DISPLAYSURF, (238, 75, 43), line[0], line[1])
         if tcav_initialized == False:
-            E1.tcav_set(tcav[0],tcav[1],tcav[12])
-            bullet = E1.take_shot(tcav[6],tcav[7],[],tcav[12])
-            projectile_group.add(bullet)
             P1.tcav_set(tcav[6],tcav[7])
             tcav_initialized = True
+            tcav_pred = True
+            tcav_pred_vector = []
+            dist_x = tcav[8]
+            dist_y = tcav[9]
+            disp_x = tcav[10]
+            disp_y = tcav[11]
+        
+            osc_x = abs(math.floor(dist_x/disp_x))
+            osc_y = abs(math.floor(dist_y/disp_y))
+            osc_x_count = 1
+            osc_y_count = 1
+
+            line = [(tcav[6]-disp_x, tcav[7]-disp_y),(tcav[6], tcav[7])]
+            theta = getAngle(line[1], line[0])
+            temp_x = tcav[6]
+            temp_y = tcav[7]
+            if (theta > 360):
+                theta = theta - 360
+            x_vel = -math.cos(theta * (2*math.pi/360)) * P1.move_speed
+            y_vel = -math.sin(theta * (2*math.pi/360)) * P1.move_speed
+            tcav_pred_vector.append([int(temp_x),int(temp_y)])
+
+            while(int(temp_x) != tcav[6]-disp_x and int(temp_y) != tcav[7]-disp_y):
+                temp_x += x_vel
+                temp_y += y_vel
+                tcav_pred_vector.append([int(temp_x),int(temp_y)])
+
+            while(len(tcav_pred_vector) <= 400):
+                if (osc_x_count%2 == 1):
+                    temp_x += 1
+                elif (osc_x_count%2 == 0):
+                    temp_x += -1
+                if (osc_y_count%2 == 1):
+                    temp_y += 1
+                elif (osc_y_count%2 == 0):
+                    temp_y += -1
+                if (len(tcav_pred_vector)/osc_x > osc_x_count):
+                    osc_x_count += 1
+                if (len(tcav_pred_vector)/osc_y > osc_y_count):
+                    osc_y_count += 1
+
+
+                tcav_pred_vector.append([int(temp_x),int(temp_y)])
+
         else:
-            engine_mode = P1.tcav_update(tcav[4],tcav[5],tcav[6],tcav[7],len(projectile_group))
+            if (tcav_pred == True):
+                tcav_pred_count += 1
+            engine_mode = P1.tcav_update(tcav[4],tcav[5],tcav[6],tcav[7],len(projectile_group), tcav_pred, tcav_pred_vector, tcav_pred_count)
             projectile_group.update(P1.rect, E1, P1.path_history)
+
+            if (tcav_pred_count >= 400):
+                print("2 seconds over")
+                E1.tcav_set(tcav[0],tcav[1],tcav[12])
+                bullet = E1.take_shot(tcav[6],tcav[7],[],tcav[12])
+                projectile_group.add(bullet)
+                tcav_pred = False
+                tcav_pred_count = 0
 
     DISPLAYSURF.fill(WHITE)
     DISPLAYSURF.blit(text, textRect)
